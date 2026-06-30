@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-29
 **Status:** Draft for user review
-**Working name:** Cannabis Canary (proposal trademark: *Cannabinoid Canary©* — name TBD)
+**Name:** Cannabis Canary© App (confirmed by user 2026-06-29; proposal had used *Cannabinoid Canary©*)
 **Supersedes:** `2026-06-29-provider-smart-app-v1-design.md` (generic evidence app — replaced once the
 real concept, a prospective cannabis social-history registry, was provided).
 **Source of truth:** user's grant proposal (pasted 2026-06-29) + Figure A "Cannabis Use Form".
@@ -109,12 +109,12 @@ FHIR **`Questionnaire`** (definition) + **`QuestionnaireResponse`** (each captur
 | Start date | date | |
 | Quit date | date (nullable) | |
 | Method of ingestion | coded | **Oral, Sublingual, Topical, Smoked, Per rectum** (from proposal) |
-| Type of product | coded | **Cream, Edible/gummy, Smoked joint, Wax, Shatter, Vape pen, Vaporizer, Transdermal patch** (+ Tincture/Oil? — Figure A example said "tincture"; confirm) |
+| Type of product | coded | **Cream, Edible/gummy, Smoked joint, Wax, Shatter, Vape pen, Vaporizer, Transdermal patch, Tincture, Oil** |
 | Grams/day | numeric | calculator input |
 | Potency (%THC) | numeric | calculator input |
 | %CBD / mg THC per unit | numeric | from product label (for labeled products) |
 | **mg THC/day** | **computed** | dosage calculator — see Section 7 (formula pending sign-off) |
-| Adverse events | report (date + description) | proposal lists "adverse events reporting"; modeled as structured AE entries |
+| Adverse events | structured report | date + free-text description + optional coding (one or more AE entries) |
 | Medical use | boolean | if yes → recommending physician + medical condition |
 | Recommending physician | text | |
 | Medical condition treated | text (codable) | |
@@ -128,13 +128,14 @@ FHIR **`Questionnaire`** (definition) + **`QuestionnaireResponse`** (each captur
 | Comment | text | |
 | Last reviewed | timestamp + action | drives reminder |
 
-## 7. Dosage calculator (crown-jewel feature) — **formula PENDING USER SIGN-OFF**
+## 7. Dosage calculator (crown-jewel feature) — **formula CONFIRMED 2026-06-29**
 
-Normalizes any product/method to a common **mg THC/day**. *Figure A shows 1.0 g × 10% → "10 mg/day"; the
-pharmacologically correct value is 100 mg. Proposed formula (awaiting confirmation):*
+Normalizes any product/method to a common **mg THC/day**. (Figure A's "10 mg/day" was a grams-vs-mg unit slip.)
 - Flower/concentrate: `mg THC/day = grams_per_day × 1000 × (%THC ÷ 100)` (1.0 g @ 10% = **100 mg/day**)
 - Labeled products: `mg THC/day = mg_THC_per_unit × units_per_day` (from label)
 - "Independent of method of ingestion" = single common output metric; inputs differ by product type.
+- **Provider help notes:** the calculator/form surfaces contextual guidance to help the provider enter
+  product-label values and interpret the computed dose (per user request).
 
 **Testing is non-negotiable here:** golden-value unit tests across every product type; the calculator is a
 pure module so it can be validated in isolation. Note Colorado ±15% label-potency variance as a documented
@@ -166,9 +167,11 @@ Researcher/population portal (Phase II cohort analytics) · patient-facing view 
 to the chart · automated extraction of values from notes · provider-satisfaction survey tooling (study
 instrument, separable).
 
-## 12. Open items (need user input)
+## 12. Resolved decisions (2026-06-29)
 
-1. **mg/day formula** — confirm Section 7. *(blocking for the calculator)*
-2. **Product-type value set** — include Tincture/Oil? Reconcile Figure A vs. proposal list.
-3. **Adverse events field** — confirm structure (date + free text + optional coding).
-4. **App name** — "Cannabis Canary" vs. "Cannabinoid Canary©".
+1. **mg/day formula** — ✅ confirmed (Section 7); provider help notes added.
+2. **Product-type value set** — ✅ proposal list + Tincture + Oil.
+3. **Adverse events** — ✅ date + free-text description + optional coding.
+4. **App name** — ✅ "Cannabis Canary©".
+
+All v1 design questions are resolved; spec is ready for implementation planning.
