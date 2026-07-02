@@ -1,0 +1,62 @@
+/* Cannabis Canary(c) — color tokens
+ *
+ * Clinical palette: calm cool-gray neutrals + a restrained canary-yellow accent.
+ * Contrast ratios below were computed (WCAG 2.x relative luminance) against the
+ * stated background; every token documented as a text color meets WCAG AA
+ * (>= 4.5:1 for normal text) on white.
+ *
+ * RULE: canary yellows (--cc-canary-300/400/500) are GRAPHIC-ONLY — mark fills,
+ * highlight bars, focus decorations. They fail text contrast on white
+ * (1.6–1.9:1) and must never be used for text. For yellow-toned text or icons
+ * on white, use --cc-canary-700.
+ */
+
+:root {
+  /* ---- Neutrals (cool gray) ---- */
+  --cc-white: #FFFFFF;
+  --cc-gray-050: #F5F7FA;   /* subtle background, table stripes */
+  --cc-gray-100: #E4E7EB;   /* dividers, disabled fills */
+  --cc-gray-200: #CBD2D9;   /* default borders (decorative) */
+  --cc-gray-400: #7B8794;   /* strong borders / input outlines — 3.66:1 on white (passes 3:1 UI-component contrast) */
+  --cc-gray-600: #616E7C;   /* muted text — 5.21:1 on white (AA) */
+  --cc-gray-700: #3E4C59;   /* secondary text — 8.81:1 on white (AA, AAA) */
+  --cc-ink:      #1F2933;   /* primary text — 14.76:1 on white (AA, AAA) */
+
+  /* ---- Canary accent ---- */
+  --cc-canary-100: #FFF8E1; /* yellow tint surface; ink on it = 13.89:1 */
+  --cc-canary-300: #FADB5F; /* graphic only */
+  --cc-canary-400: #F7C948; /* graphic only — app-icon field; ink on it = 9.42:1 */
+  --cc-canary-500: #F0B429; /* graphic only — primary mark body */
+  --cc-canary-600: #DE911D; /* graphic only — mark wing accent */
+  --cc-canary-700: #7B5C00; /* yellow-family TEXT/icon color — 6.23:1 on white (AA) */
+
+  /* ---- Functional: action / info (calm clinical blue) ---- */
+  --cc-blue-050: #EBF6FB;   /* info surface; --cc-blue-700 on it = 6.03:1 */
+  --cc-blue-700: #0F609B;   /* links, primary actions — 6.63:1 on white (AA); white on it = 6.63:1 */
+
+  /* ---- Functional: warning (amber-brown, not red — decision-support cards inform, they don't alarm) ---- */
+  --cc-warn-050: #FDF6E3;   /* warning surface; --cc-warn-800 on it = 8.28:1 */
+  --cc-warn-800: #723B13;   /* warning text — 8.93:1 on white (AA, AAA) */
+
+  /* ---- Functional: success (restrained green) ---- */
+  --cc-green-700: #147D64;  /* success text/icons — 5.06:1 on white (AA) */
+
+  /* ---- Semantic aliases (use these in components) ---- */
+  --cc-text:            var(--cc-ink);
+  --cc-text-secondary:  var(--cc-gray-700);
+  --cc-text-muted:      var(--cc-gray-600);
+  --cc-bg:              var(--cc-white);
+  --cc-bg-subtle:       var(--cc-gray-050);
+  --cc-border:          var(--cc-gray-200);
+  --cc-border-strong:   var(--cc-gray-400);
+  --cc-accent:          var(--cc-canary-500);  /* graphic only */
+  --cc-accent-text:     var(--cc-canary-700);
+  --cc-action:          var(--cc-blue-700);
+  --cc-action-text-on:  var(--cc-white);
+  --cc-info-surface:    var(--cc-blue-050);
+  --cc-info-text:       var(--cc-blue-700);
+  --cc-warning-surface: var(--cc-warn-050);
+  --cc-warning-text:    var(--cc-warn-800);
+  --cc-success-text:    var(--cc-green-700);
+  --cc-focus-ring:      var(--cc-blue-700);
+}
