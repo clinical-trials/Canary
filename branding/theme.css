@@ -1,0 +1,192 @@
+/* Cannabis Canary(c) — base UI theme
+ *
+ * Applies tokens (see tokens/colors.css — import it before this file) to the
+ * core surfaces of the SMART on FHIR app: form elements, buttons, cards, and
+ * the info/warning callouts used for decision-support content.
+ *
+ * Design intent: reads like a medical device. Quiet neutrals, one restrained
+ * accent, no decoration that competes with clinical data. Built for a dense
+ * embedded EHR panel (Epic Hyperdrive / Cerner webview).
+ */
+
+@import url("tokens/colors.css");
+
+.cc-app {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--cc-text);
+  background: var(--cc-bg);
+}
+
+/* ---------- Typography ---------- */
+
+.cc-app h1, .cc-h1 { font-size: 22px; font-weight: 600; line-height: 1.25; margin: 0 0 12px; }
+.cc-app h2, .cc-h2 { font-size: 18px; font-weight: 600; line-height: 1.25; margin: 24px 0 8px; }
+
+.cc-text-secondary { color: var(--cc-text-secondary); }
+.cc-text-muted     { color: var(--cc-text-muted); }
+
+/* Dosage figures: tabular numerals, always with units */
+.cc-numeric { font-variant-numeric: tabular-nums; }
+.cc-dose-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--cc-text);
+}
+.cc-dose-unit { font-size: 14px; font-weight: 400; color: var(--cc-text-secondary); }
+
+/* ---------- Form elements ---------- */
+
+.cc-field { margin-bottom: 16px; }
+
+.cc-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cc-text);
+  margin-bottom: 4px;
+}
+.cc-label .cc-required { color: var(--cc-warning-text); }
+
+.cc-help {
+  font-size: 13px;
+  color: var(--cc-text-secondary);
+  margin-top: 4px;
+}
+
+.cc-input,
+.cc-select,
+.cc-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+  font-size: 16px;             /* prevents zoom-on-focus; comfortable in dense panels */
+  color: var(--cc-text);
+  background: var(--cc-bg);
+  border: 1px solid var(--cc-border-strong);   /* 3.66:1 — meets 3:1 UI-component contrast */
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+.cc-textarea { min-height: 72px; resize: vertical; }
+
+.cc-input:focus-visible,
+.cc-select:focus-visible,
+.cc-textarea:focus-visible,
+.cc-btn:focus-visible {
+  outline: 2px solid var(--cc-focus-ring);
+  outline-offset: 2px;
+}
+
+.cc-input[disabled],
+.cc-select[disabled],
+.cc-textarea[disabled] {
+  background: var(--cc-gray-100);
+  color: var(--cc-text-muted);
+  cursor: not-allowed;
+}
+
+.cc-input[aria-invalid="true"],
+.cc-select[aria-invalid="true"],
+.cc-textarea[aria-invalid="true"] {
+  border-color: var(--cc-warning-text);
+}
+.cc-error-message { font-size: 13px; color: var(--cc-warning-text); margin-top: 4px; }
+
+/* ---------- Buttons ---------- */
+
+.cc-btn {
+  display: inline-block;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 9px 16px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.cc-btn--primary {
+  background: var(--cc-action);          /* white on blue-700 = 6.63:1 */
+  color: var(--cc-action-text-on);
+}
+.cc-btn--primary:hover { background: #0C5183; }
+
+.cc-btn--secondary {
+  background: var(--cc-bg);
+  color: var(--cc-action);
+  border-color: var(--cc-border-strong);
+}
+.cc-btn--secondary:hover { background: var(--cc-bg-subtle); }
+
+.cc-btn[disabled] {
+  background: var(--cc-gray-100);
+  color: var(--cc-text-muted);
+  border-color: var(--cc-gray-100);
+  cursor: not-allowed;
+}
+
+/* ---------- Cards ---------- */
+
+.cc-card {
+  background: var(--cc-bg);
+  border: 1px solid var(--cc-border);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.cc-card__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+/* ---------- Decision-support callouts ----------
+ * Two severities only. Cards inform — they never alarm and never auto-act.
+ *   info    : evidence summaries, provider help notes, calculator guidance
+ *   warning : flagged contraindications (hyperemesis, fertility,
+ *             schizoaffective risk), harm-reduction prompts (DUIC, alcohol co-use)
+ * The canary-yellow left bar on warnings is the brand's signal accent —
+ * decorative reinforcement only; the text itself carries AA contrast.
+ */
+
+.cc-callout {
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border: 1px solid;
+}
+
+.cc-callout__title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.cc-callout__body { font-size: 14px; margin: 0; }
+
+/* Citations line inside a decision-support card */
+.cc-callout__source {
+  display: block;
+  font-size: 12px;
+  color: var(--cc-text-secondary);
+  margin-top: 8px;
+}
+
+.cc-callout--info {
+  background: var(--cc-info-surface);
+  border-color: var(--cc-info-text);      /* #0F609B on #EBF6FB */
+  color: var(--cc-text);                  /* body stays ink: 13.43:1 on surface */
+}
+.cc-callout--info .cc-callout__title { color: var(--cc-info-text); }   /* 6.03:1 on surface */
+
+.cc-callout--warning {
+  background: var(--cc-warning-surface);
+  border-color: var(--cc-warning-text);
+  border-left: 4px solid var(--cc-canary-500);   /* the canary signal — decorative */
+  color: var(--cc-text);
+}
+.cc-callout--warning .cc-callout__title { color: var(--cc-warning-text); }  /* 8.28:1 on surface */

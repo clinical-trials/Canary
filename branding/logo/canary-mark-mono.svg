@@ -1,0 +1,26 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cannabis Canary monochrome mark">
+  <!-- Cannabis Canary(c) monochrome mark.
+       Single-color variant for print, embossing, favicons on colored chrome,
+       and any context where the two-tone mark cannot be used. Recolor by
+       changing the single fill/stroke value (default: ink #1F2933).
+       The eye is a knockout (fill-rule) so it works on any background. -->
+
+  <g fill="#1F2933" stroke="#1F2933">
+    <!-- tail -->
+    <polygon points="16,48 42,42 43,55" stroke="none"/>
+    <!-- body -->
+    <circle cx="50" cy="54" r="17" stroke="none"/>
+    <!-- head with knocked-out eye -->
+    <path fill-rule="evenodd" stroke="none" d="M54 37 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0 M65.5 34.5 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0"/>
+    <!-- beak -->
+    <polygon points="74,33 84,37 74,41" stroke="none"/>
+    <!-- legs -->
+    <rect x="45.5" y="69" width="2.2" height="10" stroke="none"/>
+    <rect x="52.3" y="69" width="2.2" height="10" stroke="none"/>
+    <!-- perch -->
+    <rect x="26" y="78.5" width="48" height="4" rx="2" stroke="none"/>
+    <!-- signal arcs -->
+    <path d="M89.5 31.6 A7 7 0 0 1 89.5 42.4" fill="none" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M92.7 27.8 A12 12 0 0 1 92.7 46.2" fill="none" stroke-width="2.6" stroke-linecap="round"/>
+  </g>
+</svg>
