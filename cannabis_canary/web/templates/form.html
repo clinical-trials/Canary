@@ -19,7 +19,7 @@
 
   fieldset.canna { border: 1px solid var(--edge-dk); border-radius: 3px;
     background: linear-gradient(#f7f8f9, #eceef1); padding: 10px 14px 12px;
-    max-width: 860px; position: relative; }
+    max-width: 900px; position: relative; }
   legend { font-weight: bold; padding: 0 6px; color: #2b3644; }
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 40px; }
@@ -34,13 +34,24 @@
   .lookup .glass { position: absolute; right: 4px; top: 3px; color: var(--muted);
     font-size: 11px; pointer-events: none; }
 
-  /* dosage readout block (right side, big number) */
-  .doserow { display: grid; grid-template-columns: 150px 1fr auto; align-items: center; }
-  .dose-num { font-size: 30px; font-weight: bold; text-align: right;
-    font-variant-numeric: tabular-nums; line-height: 1; grid-row: span 2; align-self: center;
-    color: var(--ink); padding-left: 10px; }
-  .dose-unit { font-size: 12px; text-align: right; color: var(--ink);
-    grid-column: 3; padding-left: 10px; }
+  /* multi-product dosage block */
+  .doserow { display: flex; gap: 12px; align-items: flex-start; }
+  .products-block { flex: 1; }
+  .products-head, .prow { display: grid;
+    grid-template-columns: 132px 64px 58px 20px; gap: 4px; align-items: center; }
+  .products-head { color: var(--muted); font-size: 11px; margin-bottom: 2px; }
+  .prow { margin-bottom: 3px; }
+  .prow select, .prow input { font: inherit; padding: 2px 3px; border: 1px solid var(--edge);
+    background: var(--field); border-radius: 2px; width: 100%; }
+  .prm { border: 1px solid var(--edge); background: #f2f4f6; border-radius: 2px;
+    cursor: pointer; color: #a3271f; line-height: 1; padding: 1px 0; }
+  #add-type { font: inherit; margin-top: 3px; padding: 2px 8px; cursor: pointer;
+    border: 1px solid var(--edge-dk); background: linear-gradient(#fdfdfe,#e7eaee);
+    border-radius: 3px; }
+  .dose { text-align: right; min-width: 96px; }
+  .dose-num { font-size: 30px; font-weight: bold; font-variant-numeric: tabular-nums;
+    line-height: 1; color: var(--ink); display: block; }
+  .dose-unit { font-size: 11px; color: var(--ink); }
 
   /* Yes / No paired buttons */
   .yn { display: inline-flex; gap: 6px; }
@@ -66,13 +77,12 @@
   #save-result { font-size: 12px; }
   .ok { color: var(--ok); } .err { color: var(--err); font-weight: bold; }
 
-  /* decision-support callouts */
-  .cds { max-width: 860px; margin: 10px 0 0; }
+  .cds { max-width: 900px; margin: 10px 0 0; }
   .callout { display: none; border-left: 4px solid var(--warn-edge);
     background: var(--warn-bg); padding: 8px 12px; margin: 6px 0; font-size: 12px; }
   .callout strong { display: block; margin-bottom: 2px; }
   .callout a { color: #8a6d00; }
-  .trend { max-width: 860px; margin-top: 14px; }
+  .trend { max-width: 900px; margin-top: 14px; }
   .trend h2 { font-size: 13px; margin: 0 0 4px; }
   svg { max-width: 100%; height: auto; }
 </style>
@@ -93,7 +103,6 @@
 <fieldset class="canna">
   <legend>Cannabis Use</legend>
 
-  <!-- top block: identity/exposure on left, product + dose on right -->
   <div class="grid">
     <!-- LEFT -->
     <div>
@@ -114,26 +123,18 @@
         <input class="fld" type="date" id="quit_date">
       </div>
     </div>
-    <!-- RIGHT: product type + dosage calculator -->
+    <!-- RIGHT: multi-product dosage calculator -->
     <div>
-      <div class="row">
-        <label for="product_type">Types:</label>
-        <span class="lookup">
-          <select class="fld" id="product_type">
-            <option value="">—</option>
-            {% for p in product_types %}<option value="{{ p }}">{{ p.replace("-", " ") }}</option>{% endfor %}
-          </select>
-        </span>
-      </div>
       <div class="doserow">
-        <label for="grams_per_day">Grams/day:</label>
-        <input class="fld" type="number" step="0.1" min="0" id="grams_per_day">
-        <span class="dose-num" id="dose-out">0</span>
-      </div>
-      <div class="doserow">
-        <label for="percent_thc">Potency (%THC):</label>
-        <input class="fld" type="number" step="0.1" min="0" max="100" id="percent_thc">
-        <span class="dose-unit">mg per day</span>
+        <div class="products-block">
+          <div class="products-head"><span>Types (add multiple)</span><span>Grams/day</span><span>%THC</span><span></span></div>
+          <div id="products"></div>
+          <button type="button" id="add-type">+ Add type</button>
+        </div>
+        <div class="dose">
+          <span class="dose-num" id="dose-out">0</span>
+          <span class="dose-unit">mg per day<br>(total)</span>
+        </div>
       </div>
     </div>
   </div>
@@ -177,7 +178,6 @@
 
   <hr class="sep">
 
-  <!-- harm reduction (left) + contraindications (right) -->
   <div class="grid">
     <div>
       <div class="row"><label>DUIC:</label>
@@ -208,7 +208,6 @@
     </span>
     <span class="comment">Comment:
       <input class="fld" type="text" id="comment"></span>
-    <!-- canary mark -->
     <svg class="canary" viewBox="0 0 32 32" aria-hidden="true">
       <path d="M20 6c-4 0-7 3-7 7 0 1-3 2-5 4-1 1-1 3 1 3 1 3 4 5 8 5 5 0 9-4 9-9 0-2-1-4-2-6l3-2-4-1-1-2-2 2z"
             fill="#e9c22a" stroke="#b7920f" stroke-width="1" stroke-linejoin="round"/>
@@ -236,12 +235,68 @@
   {{ trend_svg | safe }}
 </div>
 
+<template id="prow-tpl">
+  <div class="prow">
+    <select class="ptype">
+      <option value="">— type —</option>
+      {% for p in product_types %}<option value="{{ p }}">{{ p.replace("-", " ") }}</option>{% endfor %}
+    </select>
+    <input class="pgrams" type="number" step="0.1" min="0" placeholder="g">
+    <input class="ppct" type="number" step="0.1" min="0" max="100" placeholder="%">
+    <button type="button" class="prm" title="Remove">&times;</button>
+  </div>
+</template>
+
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var bools = {};
-
   function headers() { return { "Content-Type": "application/json", "X-Canary-Request": "1" }; }
+
+  // ---- product rows (multiple types, additive) ----
+  var tpl = $("prow-tpl");
+  function addRow() {
+    var node = tpl.content.cloneNode(true);
+    $("products").appendChild(node);
+    var row = $("products").lastElementChild;
+    row.querySelectorAll("select,input").forEach(function (el) {
+      el.addEventListener("input", refreshDose);
+    });
+    row.querySelector(".prm").addEventListener("click", function () {
+      row.remove();
+      if (!$("products").children.length) addRow();
+      refreshDose();
+    });
+  }
+  $("add-type").addEventListener("click", addRow);
+
+  function collectProducts() {
+    var rows = [];
+    document.querySelectorAll("#products .prow").forEach(function (row) {
+      var type = row.querySelector(".ptype").value || null;
+      var g = parseFloat(row.querySelector(".pgrams").value);
+      var p = parseFloat(row.querySelector(".ppct").value);
+      var entry = {};
+      if (type) entry.product_type = type;
+      if (!isNaN(g)) entry.grams_per_day = g;
+      if (!isNaN(p)) entry.percent_thc = p;
+      if (!isNaN(g) && !isNaN(p)) entry.dose_mode = "concentration";
+      if (Object.keys(entry).length) rows.push(entry);
+    });
+    return rows;
+  }
+
+  function fmt(n) { return Number.isInteger(n) ? n : n.toFixed(1); }
+
+  function refreshDose() {
+    fetch("/api/dose", { method: "POST", headers: headers(),
+      body: JSON.stringify({ products: collectProducts() }) })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { $("dose-out").textContent = d && d.thc_mg_per_day != null ? fmt(d.thc_mg_per_day) : "—"; })
+      .catch(function () { $("dose-out").textContent = "—"; });
+  }
+
+  addRow();  // start with one product row
 
   // ---- Yes/No buttons ----
   document.querySelectorAll(".yn[data-bool]").forEach(function (grp) {
@@ -252,33 +307,14 @@
         bools[name] = val;
         grp.querySelectorAll("button").forEach(function (b) { b.classList.remove("on", "warn"); });
         btn.classList.add("on");
-        if (grp.dataset.topic && val) {
-          btn.classList.add("warn");
-          var c = $("callout-" + grp.dataset.topic); if (c) c.style.display = "block";
-        } else if (grp.dataset.topic) {
-          var c2 = $("callout-" + grp.dataset.topic); if (c2) c2.style.display = "none";
+        if (grp.dataset.topic) {
+          var c = $("callout-" + grp.dataset.topic);
+          if (c) c.style.display = val ? "block" : "none";
+          if (val) btn.classList.add("warn");
         }
       });
     });
   });
-
-  // ---- live dosage calculator ----
-  function refreshDose() {
-    var g = parseFloat($("grams_per_day").value);
-    var p = parseFloat($("percent_thc").value);
-    if (isNaN(g) || isNaN(p)) { $("dose-out").textContent = "0"; return; }
-    fetch("/api/dose", { method: "POST", headers: headers(),
-      body: JSON.stringify({ dose_mode: "concentration", grams_per_day: g, percent_thc: p }) })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        $("dose-out").textContent = d && d.thc_mg_per_day != null
-          ? (Number.isInteger(d.thc_mg_per_day) ? d.thc_mg_per_day : d.thc_mg_per_day.toFixed(1))
-          : "—";
-      })
-      .catch(function () { $("dose-out").textContent = "—"; });
-  }
-  $("grams_per_day").addEventListener("input", refreshDose);
-  $("percent_thc").addEventListener("input", refreshDose);
 
   // ---- save ----
   $("save").addEventListener("click", function () {
@@ -287,13 +323,11 @@
       start_date: $("start_date").value || null,
       quit_date: $("quit_date").value || null,
       method: $("method").value || null,
-      product_type: $("product_type").value || null,
+      products: collectProducts(),
       recommending_physician: $("recommending_physician").value || null,
       condition_treated: $("condition_treated").value || null,
       comment: $("comment").value || null
     };
-    var g = parseFloat($("grams_per_day").value), p = parseFloat($("percent_thc").value);
-    if (!isNaN(g) && !isNaN(p)) { body.dose_mode = "concentration"; body.grams_per_day = g; body.percent_thc = p; }
     ["medical_use","duic","mix_alcohol","desire_to_quit","counseling_given",
      "hyperemesis","reproductive_issue","schizoaffective"].forEach(function (n) {
       if (n in bools) body[n] = bools[n];
@@ -305,7 +339,7 @@
     fetch("/api/history", { method: "POST", headers: headers(), body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (res) {
-        if (res.ok) { out.className = "ok"; out.textContent = "Saved · next review " + res.d.next_review_due; }
+        if (res.ok) { out.className = "ok"; out.textContent = "Saved · " + (res.d.thc_mg_per_day ?? 0) + " mg/day · next review " + res.d.next_review_due; }
         else { out.className = "err"; out.textContent = (res.d.errors || [res.d.error || "save failed"]).join(" · "); }
       })
       .catch(function () { out.className = "err"; out.textContent = "Network error."; });

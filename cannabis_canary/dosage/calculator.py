@@ -69,3 +69,13 @@ def compute_dose(dose_input: DoseInput) -> DoseResult:
     return DoseResult(
         cannabinoid=dose_input.cannabinoid, mg_per_day=mg, mode=dose_input.mode
     )
+
+
+def total_mg_per_day(dose_inputs: list[DoseInput]) -> float:
+    """Additive total across multiple products.
+
+    A patient may use several product types at once (e.g. a tincture and an
+    edible); their mg/day contributions sum to a single daily total. An empty
+    list totals 0.0.
+    """
+    return sum(compute_dose(d).mg_per_day for d in dose_inputs)

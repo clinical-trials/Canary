@@ -4,6 +4,7 @@ from cannabis_canary.dosage.calculator import (
     compute_dose,
     mg_per_day_from_concentration,
     mg_per_day_from_label,
+    total_mg_per_day,
 )
 from cannabis_canary.dosage.models import (
     CalcMode,
@@ -15,6 +16,7 @@ from cannabis_canary.dosage.models import (
 __all__ = [
     "InvalidDoseInput",
     "compute_dose",
+    "total_mg_per_day",
     "mg_per_day_from_concentration",
     "mg_per_day_from_label",
     "CalcMode",

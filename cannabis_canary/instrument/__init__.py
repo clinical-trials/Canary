@@ -8,6 +8,7 @@ from cannabis_canary.instrument.definition import (
 from cannabis_canary.instrument.validation import (
     CannabisHistory,
     InstrumentValidationError,
+    ProductEntry,
     parse_history,
     to_questionnaire_response,
 )
@@ -19,6 +20,7 @@ __all__ = [
     "questionnaire",
     "CannabisHistory",
     "InstrumentValidationError",
+    "ProductEntry",
     "parse_history",
     "to_questionnaire_response",
 ]

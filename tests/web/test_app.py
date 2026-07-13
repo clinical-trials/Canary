@@ -142,6 +142,28 @@ def test_dose_api(client):
     assert resp.status_code == 422
 
 
+def test_dose_api_sums_multiple_products(client):
+    resp = client.post(
+        "/api/dose", headers=API_HEADERS,
+        json={"products": [
+            {"dose_mode": "concentration", "grams_per_day": 1.0, "percent_thc": 10.0},
+            {"dose_mode": "label", "mg_per_unit": 10.0, "units_per_day": 2.0},
+        ]},
+    )
+    assert resp.json() == {"thc_mg_per_day": 120.0}
+
+
+def test_dose_api_skips_incomplete_rows(client):
+    resp = client.post(
+        "/api/dose", headers=API_HEADERS,
+        json={"products": [
+            {"dose_mode": "concentration", "grams_per_day": 2.0, "percent_thc": 10.0},
+            {"dose_mode": "", "grams_per_day": None},  # incomplete -> skipped
+        ]},
+    )
+    assert resp.json() == {"thc_mg_per_day": 200.0}
+
+
 def test_dose_api_requires_custom_header(client):
     resp = client.post("/api/dose", json={"dose_mode": "label"})
     assert resp.status_code == 403

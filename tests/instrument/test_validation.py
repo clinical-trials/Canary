@@ -39,6 +39,59 @@ def test_parse_valid_history_computes_dose():
     assert h.thc_mg_per_day == 100.0  # 1.0 g @ 10% -> 100 mg/day
 
 
+def test_parse_multiple_products_are_additive():
+    h = parse_history(
+        {
+            "exposure_status": "current-every-day",
+            "products": [
+                {"product_type": "tincture", "dose_mode": "concentration",
+                 "grams_per_day": 1.0, "percent_thc": 10.0},   # 100 mg
+                {"product_type": "edible-gummy", "dose_mode": "label",
+                 "mg_per_unit": 10.0, "units_per_day": 2.0},    # 20 mg
+            ],
+        }
+    )
+    assert h.thc_mg_per_day == 120.0
+    assert len(h.products) == 2
+    assert [p.product_type for p in h.products] == ["tincture", "edible-gummy"]
+    assert [p.thc_mg_per_day for p in h.products] == [100.0, 20.0]
+
+
+def test_multiple_products_serialized_as_repeating_groups():
+    h = parse_history(
+        {
+            "exposure_status": "current-some-days",
+            "products": [
+                {"product_type": "tincture", "dose_mode": "concentration",
+                 "grams_per_day": 1.0, "percent_thc": 10.0},
+                {"product_type": "wax", "dose_mode": "concentration",
+                 "grams_per_day": 0.2, "percent_thc": 80.0},
+            ],
+        }
+    )
+    qr = to_questionnaire_response(h, authored="2026-07-12T00:00:00Z")
+    groups = [i for i in qr["item"] if i["linkId"] == "products"]
+    assert len(groups) == 2
+    total = next(i for i in qr["item"] if i["linkId"] == "thc_mg_per_day")
+    assert total["answer"][0]["valueDecimal"] == 260.0  # 100 + 160
+
+
+def test_bad_product_in_list_reports_indexed_error():
+    with pytest.raises(InstrumentValidationError) as exc:
+        parse_history(
+            {
+                "exposure_status": "current-every-day",
+                "products": [
+                    {"product_type": "tincture", "dose_mode": "concentration",
+                     "grams_per_day": 1.0, "percent_thc": 10.0},
+                    {"product_type": "brownie-mix", "dose_mode": "concentration",
+                     "grams_per_day": 1.0, "percent_thc": 10.0},
+                ],
+            }
+        )
+    assert any("products[1].product_type" in e for e in exc.value.errors)
+
+
 def test_parse_label_mode():
     h = parse_history(
         valid_payload(

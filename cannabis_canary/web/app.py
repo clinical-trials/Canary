@@ -28,7 +28,7 @@ from cannabis_canary.dosage import (
     Cannabinoid,
     DoseInput,
     InvalidDoseInput,
-    compute_dose,
+    total_mg_per_day,
 )
 from cannabis_canary.instrument import (
     EXPOSURE_STATUSES,
@@ -243,21 +243,27 @@ def create_app(settings: Settings, http_client: httpx.Client | None = None) -> F
     async def api_dose(request: Request):
         require_api_header(request)
         body = await request.json()
+        raw = body.get("products") if isinstance(body.get("products"), list) else [body]
+        inputs = []
         try:
-            mode = CalcMode(body.get("dose_mode", ""))
-            result = compute_dose(
-                DoseInput(
-                    cannabinoid=Cannabinoid.THC,
-                    mode=mode,
-                    grams_per_day=body.get("grams_per_day"),
-                    percent=body.get("percent_thc"),
-                    mg_per_unit=body.get("mg_per_unit"),
-                    units_per_day=body.get("units_per_day"),
+            for product in raw:
+                mode_str = product.get("dose_mode")
+                if not mode_str:
+                    continue  # incomplete product row — contributes nothing yet
+                inputs.append(
+                    DoseInput(
+                        cannabinoid=Cannabinoid.THC,
+                        mode=CalcMode(mode_str),
+                        grams_per_day=product.get("grams_per_day"),
+                        percent=product.get("percent_thc"),
+                        mg_per_unit=product.get("mg_per_unit"),
+                        units_per_day=product.get("units_per_day"),
+                    )
                 )
-            )
+            total = total_mg_per_day(inputs)
         except (InvalidDoseInput, ValueError) as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
-        return {"thc_mg_per_day": result.mg_per_day}
+        return {"thc_mg_per_day": total}
 
     @app.post("/api/history")
     async def api_save_history(request: Request):

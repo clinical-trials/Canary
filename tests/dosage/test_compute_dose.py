@@ -1,12 +1,32 @@
 import pytest
 
-from cannabis_canary.dosage.calculator import InvalidDoseInput, compute_dose
+from cannabis_canary.dosage.calculator import (
+    InvalidDoseInput,
+    compute_dose,
+    total_mg_per_day,
+)
 from cannabis_canary.dosage.models import (
     CalcMode,
     Cannabinoid,
     DoseInput,
     DoseResult,
 )
+
+
+def _thc(mode, **kw):
+    return DoseInput(cannabinoid=Cannabinoid.THC, mode=mode, **kw)
+
+
+def test_total_mg_per_day_is_additive_across_products():
+    inputs = [
+        _thc(CalcMode.CONCENTRATION, grams_per_day=1.0, percent=10.0),  # 100
+        _thc(CalcMode.LABEL, mg_per_unit=10.0, units_per_day=2.0),       # 20
+    ]
+    assert total_mg_per_day(inputs) == 120.0
+
+
+def test_total_mg_per_day_empty_is_zero():
+    assert total_mg_per_day([]) == 0.0
 
 
 def test_compute_dose_concentration_returns_result():

@@ -1,9 +1,15 @@
 """Validation + typed model for captured cannabis social histories.
 
-Accepts the flat JSON payload the form posts, validates against the spec's
-value sets, computes THC mg/day via the dosage module, and converts to a FHIR
-R4 QuestionnaireResponse for registry storage. Collects ALL errors before
-raising so the provider can fix everything in one pass.
+Accepts the JSON payload the form posts, validates against the spec's value
+sets, computes an ADDITIVE THC mg/day total across one or more products via the
+dosage module, and converts to a FHIR R4 QuestionnaireResponse for registry
+storage. Collects ALL errors before raising so the provider can fix everything
+in one pass.
+
+Payload shape for products (both accepted):
+  - New/multi:  {"products": [{"product_type","dose_mode","grams_per_day",
+                 "percent_thc","mg_per_unit","units_per_day"}, ...]}
+  - Legacy/single: the same keys at the top level (wrapped into one product).
 """
 from __future__ import annotations
 
@@ -24,6 +30,11 @@ from cannabis_canary.instrument.definition import (
     QUESTIONNAIRE_URL,
 )
 
+_LEGACY_PRODUCT_KEYS = (
+    "product_type", "dose_mode", "grams_per_day", "percent_thc",
+    "mg_per_unit", "units_per_day",
+)
+
 
 class InstrumentValidationError(ValueError):
     def __init__(self, errors: list[str]):
@@ -39,19 +50,24 @@ class AdverseEvent:
 
 
 @dataclass(frozen=True)
+class ProductEntry:
+    product_type: str | None = None
+    dose_mode: str | None = None
+    grams_per_day: float | None = None
+    percent_thc: float | None = None
+    mg_per_unit: float | None = None
+    units_per_day: float | None = None
+    thc_mg_per_day: float | None = None  # this product's contribution
+
+
+@dataclass(frozen=True)
 class CannabisHistory:
     exposure_status: str
     start_date: date | None = None
     quit_date: date | None = None
     method: str | None = None
-    product_type: str | None = None
-    dose_mode: str | None = None
-    grams_per_day: float | None = None
-    percent_thc: float | None = None
-    percent_cbd: float | None = None
-    mg_per_unit: float | None = None
-    units_per_day: float | None = None
-    thc_mg_per_day: float | None = None
+    products: tuple[ProductEntry, ...] = field(default_factory=tuple)
+    thc_mg_per_day: float | None = None  # additive total across products
     medical_use: bool | None = None
     recommending_physician: str | None = None
     condition_treated: str | None = None
@@ -99,8 +115,56 @@ def _parse_bool(value, field_name: str, errors: list[str]) -> bool | None:
     return None
 
 
+def _parse_product(p: dict, i: int, errors: list[str]) -> ProductEntry:
+    ptype = p.get("product_type") or None
+    if ptype is not None and ptype not in PRODUCT_TYPES:
+        errors.append(
+            f"products[{i}].product_type: must be one of {PRODUCT_TYPES}, got {ptype!r}"
+        )
+    grams = _parse_float(p.get("grams_per_day"), f"products[{i}].grams_per_day", errors)
+    pct = _parse_float(p.get("percent_thc"), f"products[{i}].percent_thc", errors)
+    mgu = _parse_float(p.get("mg_per_unit"), f"products[{i}].mg_per_unit", errors)
+    units = _parse_float(p.get("units_per_day"), f"products[{i}].units_per_day", errors)
+
+    dose_mode = p.get("dose_mode") or None
+    dose: float | None = None
+    if dose_mode is not None:
+        try:
+            mode = CalcMode(dose_mode)
+        except ValueError:
+            errors.append(
+                f"products[{i}].dose_mode: must be 'concentration' or 'label', "
+                f"got {dose_mode!r}"
+            )
+            mode = None
+        if mode is not None:
+            try:
+                dose = compute_dose(
+                    DoseInput(
+                        cannabinoid=Cannabinoid.THC, mode=mode,
+                        grams_per_day=grams, percent=pct,
+                        mg_per_unit=mgu, units_per_day=units,
+                    )
+                ).mg_per_day
+            except InvalidDoseInput as exc:
+                errors.append(f"products[{i}].dose: {exc}")
+
+    return ProductEntry(
+        product_type=ptype, dose_mode=dose_mode, grams_per_day=grams,
+        percent_thc=pct, mg_per_unit=mgu, units_per_day=units, thc_mg_per_day=dose,
+    )
+
+
+def _raw_products(payload: dict) -> list[dict]:
+    if isinstance(payload.get("products"), list):
+        return payload["products"]
+    if any(payload.get(k) not in (None, "") for k in _LEGACY_PRODUCT_KEYS):
+        return [{k: payload.get(k) for k in _LEGACY_PRODUCT_KEYS}]
+    return []
+
+
 def parse_history(payload: dict) -> CannabisHistory:
-    """Validate a flat form payload and return a typed CannabisHistory.
+    """Validate a form payload and return a typed CannabisHistory.
 
     Raises InstrumentValidationError with ALL problems found.
     """
@@ -116,18 +180,14 @@ def parse_history(payload: dict) -> CannabisHistory:
     if method is not None and method not in METHODS:
         errors.append(f"method: must be one of {METHODS}, got {method!r}")
 
-    product = payload.get("product_type") or None
-    if product is not None and product not in PRODUCT_TYPES:
-        errors.append(f"product_type: must be one of {PRODUCT_TYPES}, got {product!r}")
-
     start = _parse_date(payload.get("start_date"), "start_date", errors)
     quit_ = _parse_date(payload.get("quit_date"), "quit_date", errors)
 
-    grams = _parse_float(payload.get("grams_per_day"), "grams_per_day", errors)
-    pct_thc = _parse_float(payload.get("percent_thc"), "percent_thc", errors)
-    pct_cbd = _parse_float(payload.get("percent_cbd"), "percent_cbd", errors)
-    mg_unit = _parse_float(payload.get("mg_per_unit"), "mg_per_unit", errors)
-    units = _parse_float(payload.get("units_per_day"), "units_per_day", errors)
+    products = tuple(
+        _parse_product(p, i, errors) for i, p in enumerate(_raw_products(payload))
+    )
+    contributions = [p.thc_mg_per_day for p in products if p.thc_mg_per_day is not None]
+    total = sum(contributions) if contributions else None
 
     bools = {
         name: _parse_bool(payload.get(name), name, errors)
@@ -152,29 +212,6 @@ def parse_history(payload: dict) -> CannabisHistory:
             )
         )
 
-    dose_mode = payload.get("dose_mode") or None
-    thc_mg: float | None = None
-    if dose_mode is not None:
-        try:
-            mode = CalcMode(dose_mode)
-        except ValueError:
-            errors.append(f"dose_mode: must be 'concentration' or 'label', got {dose_mode!r}")
-            mode = None
-        if mode is not None and not errors:
-            try:
-                thc_mg = compute_dose(
-                    DoseInput(
-                        cannabinoid=Cannabinoid.THC,
-                        mode=mode,
-                        grams_per_day=grams,
-                        percent=pct_thc,
-                        mg_per_unit=mg_unit,
-                        units_per_day=units,
-                    )
-                ).mg_per_day
-            except InvalidDoseInput as exc:
-                errors.append(f"dose: {exc}")
-
     if errors:
         raise InstrumentValidationError(errors)
 
@@ -183,14 +220,8 @@ def parse_history(payload: dict) -> CannabisHistory:
         start_date=start,
         quit_date=quit_,
         method=method,
-        product_type=product,
-        dose_mode=dose_mode,
-        grams_per_day=grams,
-        percent_thc=pct_thc,
-        percent_cbd=pct_cbd,
-        mg_per_unit=mg_unit,
-        units_per_day=units,
-        thc_mg_per_day=thc_mg,
+        products=products,
+        thc_mg_per_day=total,
         adverse_events=tuple(adverse_events),
         comment=(payload.get("comment") or None),
         recommending_physician=(payload.get("recommending_physician") or None),
@@ -231,13 +262,29 @@ def to_questionnaire_response(
     add("start_date", history.start_date)
     add("quit_date", history.quit_date)
     add("method", history.method, coded=True)
-    add("product_type", history.product_type, coded=True)
-    add("grams_per_day", history.grams_per_day)
-    add("percent_thc", history.percent_thc)
-    add("percent_cbd", history.percent_cbd)
-    add("mg_per_unit", history.mg_per_unit)
-    add("units_per_day", history.units_per_day)
-    add("thc_mg_per_day", history.thc_mg_per_day)
+
+    for product in history.products:
+        p_items: list[dict] = []
+        if product.product_type is not None:
+            p_items.append({
+                "linkId": "product_type",
+                "answer": [{"valueCoding": {
+                    "code": product.product_type,
+                    "display": product.product_type.replace("-", " "),
+                }}],
+            })
+        for lid, val in (
+            ("grams_per_day", product.grams_per_day),
+            ("percent_thc", product.percent_thc),
+            ("mg_per_unit", product.mg_per_unit),
+            ("units_per_day", product.units_per_day),
+        ):
+            if val is not None:
+                p_items.append({"linkId": lid, "answer": [_answer(val)]})
+        if p_items:
+            items.append({"linkId": "products", "item": p_items})
+
+    add("thc_mg_per_day", history.thc_mg_per_day)  # additive total
     add("medical_use", history.medical_use)
     add("recommending_physician", history.recommending_physician)
     add("condition_treated", history.condition_treated)
