@@ -18,6 +18,9 @@ Primary source (chosen for this project):
   meaningful systemic absorption. Rectal and transdermal-patch factors are left
   UNSET (contested / insufficient evidence) — the effective dose is simply not
   estimated for those routes rather than guessed.
+
+  Corroborating ranges: Upadhyay et al., J Cannabis Res. 2023;5:3 (PMID 36750917)
+  report oral ~7-10% and inhaled ~20-35%, consistent with the factors above.
 """
 from __future__ import annotations
 

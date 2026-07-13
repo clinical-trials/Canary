@@ -136,6 +136,9 @@ def test_full_flow_form_renders_with_context(client):
     assert "effective" in page         # estimated effective (bioavailability) dose
     assert "References" in page        # clinician references panel
     assert "Godbole" in page           # a real, cited reference (rodent PK review)
+    assert "36750917" in page          # new source rendered as a PubMed-id link
+    assert "10.1159/000551979" in page # a DOI link
+    assert "sperm motility" in page    # updated reproductive-concerns label
 
 
 def test_dose_api(client):

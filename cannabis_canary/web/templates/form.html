@@ -189,7 +189,7 @@
     <div>
       <div class="row"><label>Hyperemesis:</label>
         <span class="yn" data-bool="hyperemesis" data-topic="hyperemesis"><button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button></span></div>
-      <div class="row"><label>Reproductive issue &mdash; motility or breast milk:</label>
+      <div class="row"><label>Reproductive concerns &mdash; sperm motility or breast milk:</label>
         <span class="yn" data-bool="reproductive_issue" data-topic="reproductive"><button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button></span></div>
       <div class="row"><label>Presence of schizoaffective disorders:</label>
         <span class="yn" data-bool="schizoaffective" data-topic="schizoaffective"><button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button></span></div>
@@ -234,7 +234,11 @@
   <summary>References — dosing &amp; routes of ingestion (for clinician review)</summary>
   <ul>
     {% for r in references %}<li>{{ r.citation }}
-      <a href="{{ r.url }}" target="_blank" rel="noopener noreferrer">review &rarr;</a></li>{% endfor %}
+      {% if r.doi %}<a href="https://doi.org/{{ r.doi }}" target="_blank" rel="noopener noreferrer">DOI</a>{% endif %}
+      {% if r.pmid %}&middot; <a href="https://pubmed.ncbi.nlm.nih.gov/{{ r.pmid }}/" target="_blank" rel="noopener noreferrer">PubMed {{ r.pmid }}</a>{% endif %}
+      {% if r.pmcid %}&middot; <a href="https://pmc.ncbi.nlm.nih.gov/articles/{{ r.pmcid }}/" target="_blank" rel="noopener noreferrer">PDF</a>{% endif %}
+      {% if r.search %}&middot; <a href="https://pubmed.ncbi.nlm.nih.gov/?term={{ r.search | urlencode }}" target="_blank" rel="noopener noreferrer">look up &rarr;</a>{% endif %}
+    </li>{% endfor %}
   </ul>
 </details>
 

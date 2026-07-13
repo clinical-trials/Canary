@@ -91,7 +91,7 @@ def questionnaire() -> dict:
             _item("hyperemesis", "Hyperemesis", "boolean"),
             _item(
                 "reproductive_issue",
-                "Reproductive issue — motility or breast milk",
+                "Reproductive concerns — sperm motility or breast milk",
                 "boolean",
             ),
             _item("schizoaffective", "Presence of schizoaffective disorders", "boolean"),
