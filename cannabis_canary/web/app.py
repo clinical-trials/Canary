@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
@@ -32,6 +32,7 @@ from cannabis_canary.dosage import (
     effective_mg_per_day,
 )
 from cannabis_canary.dosage import ROUTE_GUIDANCE
+from cannabis_canary.evidence import DOSING_REFERENCES
 from cannabis_canary.instrument import (
     EXPOSURE_STATUSES,
     METHODS,
@@ -54,6 +55,21 @@ from cannabis_canary.web.config import Settings
 from cannabis_canary.web.sessions import COOKIE_NAME, MemorySessionStore
 
 _TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+
+# A tiny cute canary — served as the app favicon.
+_FAVICON_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
+    '<circle cx="15" cy="19" r="9" fill="#f2c200"/>'
+    '<circle cx="16" cy="12" r="7" fill="#f8d51f"/>'
+    '<path d="M14 26 l-1.5 3 M18 26 l1.5 3" stroke="#ef8b1f" stroke-width="1.6" '
+    'stroke-linecap="round"/>'
+    '<path d="M8 21 q3 3 7 1.5" fill="none" stroke="#e0af00" stroke-width="1.6" '
+    'stroke-linecap="round"/>'
+    '<circle cx="13.4" cy="11" r="1.6" fill="#22303c"/>'
+    '<circle cx="12.9" cy="10.5" r="0.5" fill="#fff"/>'
+    '<path d="M21 11.5 l6 -1.5 -5 4 z" fill="#ef8b1f"/>'
+    '</svg>'
+)
 
 
 def _patient_display_name(patient: dict) -> str:
@@ -116,6 +132,11 @@ def create_app(settings: Settings, http_client: httpx.Client | None = None) -> F
     @app.get("/health")
     def health() -> dict:
         return {"status": "ok"}
+
+    @app.get("/favicon.svg")
+    @app.get("/favicon.ico")
+    def favicon() -> Response:
+        return Response(_FAVICON_SVG, media_type="image/svg+xml")
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:
@@ -233,6 +254,7 @@ def create_app(settings: Settings, http_client: httpx.Client | None = None) -> F
                 "methods": METHODS,
                 "product_types": PRODUCT_TYPES,
                 "route_guidance": ROUTE_GUIDANCE,
+                "references": DOSING_REFERENCES,
                 "contraindications": CONTRAINDICATION_TOPICS,
                 "trend_svg": trend_svg(points),
                 "review": review,

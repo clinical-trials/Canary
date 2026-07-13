@@ -10,6 +10,7 @@ from cannabis_canary.evidence.pubmed import (
     build_search_url,
     filter_curated,
 )
+from cannabis_canary.evidence.references import DOSING_REFERENCES
 
 __all__ = [
     "DEFAULT_CURATED_JOURNALS",
@@ -18,4 +19,5 @@ __all__ = [
     "StudySummary",
     "build_search_url",
     "filter_curated",
+    "DOSING_REFERENCES",
 ]

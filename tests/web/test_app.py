@@ -82,6 +82,14 @@ def test_health(client):
     assert client.get("/health").json() == {"status": "ok"}
 
 
+def test_favicon_is_canary_svg(client):
+    resp = client.get("/favicon.svg")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("image/svg+xml")
+    assert "<svg" in resp.text
+    assert client.get("/favicon.ico").status_code == 200
+
+
 def test_cds_discovery_and_card(client):
     services = client.get("/cds-services").json()["services"]
     assert services[0]["id"] == "cannabis-canary-social-history"
@@ -126,6 +134,8 @@ def test_full_flow_form_renders_with_context(client):
     assert "mg/day consumed" in page   # consumed dosage readout
     assert ">Route<" in page           # per-product route (method) column
     assert "effective" in page         # estimated effective (bioavailability) dose
+    assert "References" in page        # clinician references panel
+    assert "Godbole" in page           # a real, cited reference (rodent PK review)
 
 
 def test_dose_api(client):
