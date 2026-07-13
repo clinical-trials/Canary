@@ -3,261 +3,310 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cannabis Canary© — Cannabis Use Social History</title>
+<title>Cannabis Canary© — Cannabis Use</title>
 <style>
-  :root { --ink:#1c2430; --muted:#5b6572; --accent:#8a6d00; --line:#d7dce2;
-          --warn-bg:#fdf6e3; --warn-edge:#c9a11b; --ok:#1d6f42; --err:#a3271f; }
-  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-         color: var(--ink); margin: 0; background:#fff; }
-  header { border-bottom: 2px solid var(--warn-edge); padding: 10px 16px; }
-  header h1 { font-size: 18px; margin: 0; }
-  header .pt { color: var(--muted); font-size: 13px; }
-  main { max-width: 860px; padding: 16px; }
-  fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 0 0 16px; }
-  legend { font-weight: 600; padding: 0 6px; }
-  label { display: block; font-size: 13px; margin: 8px 0 2px; }
-  input[type=text], input[type=date], input[type=number], select, textarea {
-    font: inherit; padding: 5px 7px; border: 1px solid var(--line);
-    border-radius: 4px; width: 240px; max-width: 95%; }
-  textarea { width: 95%; }
-  .row { display: flex; flex-wrap: wrap; gap: 0 24px; }
-  .help { font-size: 12px; color: var(--muted); margin: 2px 0 0; max-width: 640px; }
-  .dose-out { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .callout { display:none; border-left: 4px solid var(--warn-edge);
-             background: var(--warn-bg); padding: 8px 12px; margin: 8px 0;
-             font-size: 13px; max-width: 640px; }
-  .callout strong { display:block; }
-  .callout a { color: var(--accent); }
-  .due { color: var(--err); font-weight: 600; }
-  button { font: inherit; padding: 8px 18px; border-radius: 5px; cursor: pointer;
-           border: 1px solid var(--line); background: #f5f6f8; }
-  button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
-  #save-result { font-size: 14px; margin-left: 12px; }
-  .ok { color: var(--ok); } .err { color: var(--err); }
+  :root {
+    --face:#eef0f2; --edge:#9aa3ad; --edge-dk:#6f7883; --ink:#1b2733;
+    --muted:#5b6572; --field:#fff; --accent:#c9a11b; --sel:#cfe3f7; --sel-edge:#5b8fc7;
+    --warn-bg:#fdf6e3; --warn-edge:#c9a11b; --err:#a3271f; --ok:#1d6f42;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: Tahoma, "Segoe UI", Verdana, sans-serif; font-size: 12px;
+         color: var(--ink); margin: 0; background: #dfe3e7; padding: 14px; }
+  .patientbar { font-size: 12px; color: var(--muted); margin: 0 0 8px 2px; }
+  .patientbar strong { color: var(--ink); }
+  .due { color: var(--err); font-weight: bold; }
+
+  fieldset.canna { border: 1px solid var(--edge-dk); border-radius: 3px;
+    background: linear-gradient(#f7f8f9, #eceef1); padding: 10px 14px 12px;
+    max-width: 860px; position: relative; }
+  legend { font-weight: bold; padding: 0 6px; color: #2b3644; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 40px; }
+  .row { display: grid; grid-template-columns: 150px 1fr; align-items: center;
+         min-height: 26px; }
+  .row > label { color: var(--ink); }
+  .lookup { position: relative; display: inline-block; }
+  .lookup select, .lookup input, .fld { font: inherit; padding: 2px 4px;
+    border: 1px solid var(--edge); background: var(--field); border-radius: 2px; }
+  select.fld, input.fld { width: 150px; }
+  input.txt { width: 200px; }
+  .lookup .glass { position: absolute; right: 4px; top: 3px; color: var(--muted);
+    font-size: 11px; pointer-events: none; }
+
+  /* dosage readout block (right side, big number) */
+  .doserow { display: grid; grid-template-columns: 150px 1fr auto; align-items: center; }
+  .dose-num { font-size: 30px; font-weight: bold; text-align: right;
+    font-variant-numeric: tabular-nums; line-height: 1; grid-row: span 2; align-self: center;
+    color: var(--ink); padding-left: 10px; }
+  .dose-unit { font-size: 12px; text-align: right; color: var(--ink);
+    grid-column: 3; padding-left: 10px; }
+
+  /* Yes / No paired buttons */
+  .yn { display: inline-flex; gap: 6px; }
+  .yn button { font: inherit; padding: 1px 12px 2px; border: 1px solid var(--edge-dk);
+    background: linear-gradient(#fdfdfe, #e7eaee); border-radius: 3px; cursor: pointer;
+    color: #223; }
+  .yn button:active { background: #dce0e5; }
+  .yn button.on { background: var(--sel); border-color: var(--sel-edge);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.15); font-weight: bold; }
+  .yn button.on.warn { background: #f6e6b8; border-color: var(--warn-edge); }
+
+  hr.sep { border: none; border-top: 1px solid var(--edge); margin: 10px 0; }
+
+  .footer { display: flex; align-items: center; gap: 12px; margin-top: 10px;
+    flex-wrap: wrap; }
+  .footer .reviewed { color: var(--muted); }
+  button.review { font: inherit; padding: 3px 12px; border: 1px solid var(--edge-dk);
+    background: linear-gradient(#fdfdfe, #e7eaee); border-radius: 3px; cursor: pointer; }
+  button.review:hover { background: #eef1f4; }
+  .comment { flex: 1; min-width: 160px; }
+  .comment input { width: 100%; }
+  .canary { width: 26px; height: 26px; }
+  #save-result { font-size: 12px; }
+  .ok { color: var(--ok); } .err { color: var(--err); font-weight: bold; }
+
+  /* decision-support callouts */
+  .cds { max-width: 860px; margin: 10px 0 0; }
+  .callout { display: none; border-left: 4px solid var(--warn-edge);
+    background: var(--warn-bg); padding: 8px 12px; margin: 6px 0; font-size: 12px; }
+  .callout strong { display: block; margin-bottom: 2px; }
+  .callout a { color: #8a6d00; }
+  .trend { max-width: 860px; margin-top: 14px; }
+  .trend h2 { font-size: 13px; margin: 0 0 4px; }
   svg { max-width: 100%; height: auto; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Cannabis Canary© — Cannabis Use Social History</h1>
-  <div class="pt">
-    Patient: <strong>{{ patient_name }}</strong>
-    {% if context.sex %} · {{ context.sex }}{% endif %}
-    {% if context.birth_year %} · b. {{ context.birth_year }}{% endif %}
-    {% if review %}
-      · Last reviewed {{ review.last }} —
-      {% if review.is_due %}<span class="due">review due (was due {{ review.due }})</span>
-      {% else %}next review {{ review.due }} (every {{ review_months }} months){% endif %}
-    {% else %} · No prior cannabis history on file{% endif %}
+
+<div class="patientbar">
+  Patient: <strong>{{ patient_name }}</strong>
+  {% if context.sex %} · {{ context.sex }}{% endif %}
+  {% if context.birth_year %} · b. {{ context.birth_year }}{% endif %}
+  {% if context.problems %} · {{ context.problems | join(", ") }}{% endif %}
+  {% if context.uds_results %} · UDS:
+    {% for u in context.uds_results %}{{ u.display }} {{ u.value or "" }}{% if not loop.last %}; {% endif %}{% endfor %}
+  {% endif %}
+</div>
+
+<form id="canary-form" onsubmit="return false;">
+<fieldset class="canna">
+  <legend>Cannabis Use</legend>
+
+  <!-- top block: identity/exposure on left, product + dose on right -->
+  <div class="grid">
+    <!-- LEFT -->
+    <div>
+      <div class="row">
+        <label for="exposure_status">Exposure status:</label>
+        <span class="lookup">
+          <select class="fld" id="exposure_status">
+            {% for s in exposure_statuses %}<option value="{{ s }}">{{ s.replace("-", " ") | title }}</option>{% endfor %}
+          </select><span class="glass">&#128269;</span>
+        </span>
+      </div>
+      <div class="row">
+        <label for="start_date">Start date:</label>
+        <input class="fld" type="date" id="start_date">
+      </div>
+      <div class="row">
+        <label for="quit_date">Quit date:</label>
+        <input class="fld" type="date" id="quit_date">
+      </div>
+    </div>
+    <!-- RIGHT: product type + dosage calculator -->
+    <div>
+      <div class="row">
+        <label for="product_type">Types:</label>
+        <span class="lookup">
+          <select class="fld" id="product_type">
+            <option value="">—</option>
+            {% for p in product_types %}<option value="{{ p }}">{{ p.replace("-", " ") }}</option>{% endfor %}
+          </select>
+        </span>
+      </div>
+      <div class="doserow">
+        <label for="grams_per_day">Grams/day:</label>
+        <input class="fld" type="number" step="0.1" min="0" id="grams_per_day">
+        <span class="dose-num" id="dose-out">0</span>
+      </div>
+      <div class="doserow">
+        <label for="percent_thc">Potency (%THC):</label>
+        <input class="fld" type="number" step="0.1" min="0" max="100" id="percent_thc">
+        <span class="dose-unit">mg per day</span>
+      </div>
+    </div>
   </div>
-</header>
-<main>
 
-  {% if context.problems %}
-  <p class="help">Problem list: {{ context.problems | join(", ") }}</p>
-  {% endif %}
-  {% if context.uds_results %}
-  <p class="help">Urine drug screen (from chart):
-    {% for u in context.uds_results %}{{ u.display }} — {{ u.value or "n/a" }}{% if u.effective %} ({{ u.effective }}){% endif %}{% if not loop.last %}; {% endif %}{% endfor %}
-  </p>
-  {% endif %}
-
-  <form id="canary-form" onsubmit="return false;">
-  <fieldset>
-    <legend>Exposure</legend>
-    <div class="row">
-      <div>
-        <label for="exposure_status">Exposure status</label>
-        <select id="exposure_status">
-          {% for s in exposure_statuses %}<option value="{{ s }}">{{ s.replace("-", " ") }}</option>{% endfor %}
-        </select>
-      </div>
-      <div><label for="start_date">Start date</label><input type="date" id="start_date"></div>
-      <div><label for="quit_date">Quit date</label><input type="date" id="quit_date"></div>
-      <div>
-        <label for="method">Method of ingestion</label>
-        <select id="method"><option value="">—</option>
-          {% for m in methods %}<option value="{{ m }}">{{ m.replace("-", " ") }}</option>{% endfor %}
-        </select>
-      </div>
-      <div>
-        <label for="product_type">Type of product</label>
-        <select id="product_type"><option value="">—</option>
-          {% for p in product_types %}<option value="{{ p }}">{{ p.replace("-", " ") }}</option>{% endfor %}
-        </select>
-      </div>
-    </div>
-  </fieldset>
-
-  <fieldset>
-    <legend>Dosage calculator (THC mg/day)</legend>
-    <label for="dose_mode">How is the product measured?</label>
-    <select id="dose_mode">
-      <option value="">— no dose entered —</option>
-      <option value="concentration">By weight + potency (flower, wax, oil…)</option>
-      <option value="label">By labeled mg per unit (edibles, tinctures…)</option>
-    </select>
-    <div id="conc-inputs" style="display:none">
+  <div class="grid" style="margin-top:6px">
+    <!-- LEFT -->
+    <div>
       <div class="row">
-        <div><label for="grams_per_day">Grams per day</label><input type="number" step="0.1" min="0" id="grams_per_day"></div>
-        <div><label for="percent_thc">Potency (%THC)</label><input type="number" step="0.1" min="0" max="100" id="percent_thc"></div>
+        <label for="method">Method of ingestion:</label>
+        <span class="lookup">
+          <select class="fld" id="method">
+            <option value="">—</option>
+            {% for m in methods %}<option value="{{ m }}">{{ m.replace("-", " ") }}</option>{% endfor %}
+          </select><span class="glass">&#128269;</span>
+        </span>
       </div>
-      <p class="help"><strong>Help:</strong> use the potency percentage printed on the
-      product label. 1.0 g/day at 10% THC = <strong>100 mg THC/day</strong>
-      (grams × 1000 × %THC ÷ 100).</p>
-    </div>
-    <div id="label-inputs" style="display:none">
       <div class="row">
-        <div><label for="mg_per_unit">mg THC per unit (from label)</label><input type="number" step="0.1" min="0" id="mg_per_unit"></div>
-        <div><label for="units_per_day">Units per day</label><input type="number" step="0.1" min="0" id="units_per_day"></div>
+        <label for="ae_date">Adverse events:</label>
+        <span><input class="fld" type="date" id="ae_date">
+          <input class="txt" style="width:150px" type="text" id="ae_desc" placeholder="description"></span>
       </div>
-      <p class="help"><strong>Help:</strong> read mg THC per gummy/dropper/patch from the
-      package label and multiply by how many the patient takes daily.</p>
     </div>
-    <p>Computed dose: <span class="dose-out" id="dose-out">—</span> <span class="help">mg THC per day</span></p>
-    <p class="help">Note: state labeling rules can allow potency variance (e.g. ±15%);
-    the computed dose is an estimate based on the label. The result is comparable
-    across all products and methods of ingestion.</p>
-  </fieldset>
-
-  <fieldset>
-    <legend>Medical use</legend>
-    <div class="row">
-      <div><label><input type="checkbox" id="medical_use"> Medical use</label></div>
-      <div><label for="recommending_physician">Recommending physician</label><input type="text" id="recommending_physician"></div>
-      <div><label for="condition_treated">Condition treated with cannabis</label><input type="text" id="condition_treated"></div>
+    <!-- RIGHT -->
+    <div>
+      <div class="row">
+        <label>Medical use:</label>
+        <span class="yn" data-bool="medical_use">
+          <button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button>
+        </span>
+      </div>
+      <div class="row">
+        <label for="recommending_physician">Recommending physician:</label>
+        <input class="txt" type="text" id="recommending_physician">
+      </div>
+      <div class="row">
+        <label for="condition_treated">Medical condition:</label>
+        <input class="txt" type="text" id="condition_treated">
+      </div>
     </div>
-  </fieldset>
+  </div>
 
-  <fieldset>
-    <legend>Harm reduction &amp; contraindications</legend>
-    <div class="row">
-      <div><label><input type="checkbox" id="duic"> Driving under the influence of cannabis</label></div>
-      <div><label><input type="checkbox" id="mix_alcohol"> Mixes alcohol and THC</label></div>
-      <div><label><input type="checkbox" id="desire_to_quit"> Desire to quit</label></div>
-      <div><label><input type="checkbox" id="counseling_given"> Counseling given</label></div>
+  <hr class="sep">
+
+  <!-- harm reduction (left) + contraindications (right) -->
+  <div class="grid">
+    <div>
+      <div class="row"><label>DUIC:</label>
+        <span class="yn" data-bool="duic"><button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button></span></div>
+      <div class="row"><label>Mix ROH and THC:</label>
+        <span class="yn" data-bool="mix_alcohol"><button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button></span></div>
+      <div class="row"><label>Desire to quit:</label>
+        <span class="yn" data-bool="desire_to_quit"><button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button></span></div>
+      <div class="row"><label>Counseling given:</label>
+        <span class="yn" data-bool="counseling_given"><button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button></span></div>
     </div>
-    <div class="row">
-      <div><label><input type="checkbox" id="hyperemesis" data-topic="hyperemesis"> Hyperemesis</label></div>
-      <div><label><input type="checkbox" id="reproductive_issue" data-topic="reproductive"> Reproductive issue (motility / breast milk)</label></div>
-      <div><label><input type="checkbox" id="schizoaffective" data-topic="schizoaffective"> Schizoaffective disorders</label></div>
+    <div>
+      <div class="row"><label>Hyperemesis:</label>
+        <span class="yn" data-bool="hyperemesis" data-topic="hyperemesis"><button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button></span></div>
+      <div class="row"><label>Reproductive issue &mdash; motility or breast milk:</label>
+        <span class="yn" data-bool="reproductive_issue" data-topic="reproductive"><button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button></span></div>
+      <div class="row"><label>Presence of schizoaffective disorders:</label>
+        <span class="yn" data-bool="schizoaffective" data-topic="schizoaffective"><button type="button" data-v="1">Yes</button><button type="button" data-v="0">No</button></span></div>
     </div>
-    {% for key, c in contraindications.items() %}
-    <div class="callout" id="callout-{{ key }}">
-      <strong>{{ c.summary }}</strong>
-      {{ c.detail }}
-      <a href="https://pubmed.ncbi.nlm.nih.gov/?term={{ c.pubmed_term | urlencode }}"
-         target="_blank" rel="noopener noreferrer">Current evidence on PubMed →</a>
-    </div>
-    {% endfor %}
-  </fieldset>
+  </div>
 
-  <fieldset>
-    <legend>Adverse events</legend>
-    <div id="ae-rows"></div>
-    <button type="button" id="ae-add">+ Add adverse event</button>
-  </fieldset>
+  <div class="footer">
+    <button class="review" id="save">Mark as <u>R</u>eviewed</button>
+    <span class="reviewed">
+      {% if review %}Cannabis use last reviewed on: {{ review.last }}
+        {% if review.is_due %}&middot; <span class="due">review due</span>{% endif %}
+      {% else %}No prior cannabis history on file{% endif %}
+    </span>
+    <span class="comment">Comment:
+      <input class="fld" type="text" id="comment"></span>
+    <!-- canary mark -->
+    <svg class="canary" viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M20 6c-4 0-7 3-7 7 0 1-3 2-5 4-1 1-1 3 1 3 1 3 4 5 8 5 5 0 9-4 9-9 0-2-1-4-2-6l3-2-4-1-1-2-2 2z"
+            fill="#e9c22a" stroke="#b7920f" stroke-width="1" stroke-linejoin="round"/>
+      <circle cx="21" cy="12" r="1.3" fill="#1b2733"/>
+      <path d="M27 13l4-1-3 3z" fill="#e39b1e"/>
+    </svg>
+    <span id="save-result"></span>
+  </div>
+</fieldset>
+</form>
 
-  <fieldset>
-    <legend>Comment</legend>
-    <textarea id="comment" rows="2"></textarea>
-  </fieldset>
+<div class="cds">
+  {% for key, c in contraindications.items() %}
+  <div class="callout" id="callout-{{ key }}">
+    <strong>{{ c.summary }}</strong>
+    {{ c.detail }}
+    <a href="https://pubmed.ncbi.nlm.nih.gov/?term={{ c.pubmed_term | urlencode }}"
+       target="_blank" rel="noopener noreferrer">Current evidence on PubMed &rarr;</a>
+  </div>
+  {% endfor %}
+</div>
 
-  <button class="primary" id="save">Mark as Reviewed &amp; Save</button>
-  <span id="save-result"></span>
-  </form>
-
-  <h2 style="font-size:16px">THC mg/day over time</h2>
+<div class="trend">
+  <h2>THC mg/day over time</h2>
   {{ trend_svg | safe }}
-</main>
+</div>
 
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
+  var bools = {};
 
-  function apiHeaders() {
-    return { "Content-Type": "application/json", "X-Canary-Request": "1" };
-  }
+  function headers() { return { "Content-Type": "application/json", "X-Canary-Request": "1" }; }
 
-  // dose mode toggling + live computation
-  function doseBody() {
-    return {
-      dose_mode: $("dose_mode").value || null,
-      grams_per_day: parseFloat($("grams_per_day").value) || null,
-      percent_thc: parseFloat($("percent_thc").value) || null,
-      mg_per_unit: parseFloat($("mg_per_unit").value) || null,
-      units_per_day: parseFloat($("units_per_day").value) || null
-    };
-  }
+  // ---- Yes/No buttons ----
+  document.querySelectorAll(".yn[data-bool]").forEach(function (grp) {
+    var name = grp.dataset.bool;
+    grp.querySelectorAll("button").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var val = btn.dataset.v === "1";
+        bools[name] = val;
+        grp.querySelectorAll("button").forEach(function (b) { b.classList.remove("on", "warn"); });
+        btn.classList.add("on");
+        if (grp.dataset.topic && val) {
+          btn.classList.add("warn");
+          var c = $("callout-" + grp.dataset.topic); if (c) c.style.display = "block";
+        } else if (grp.dataset.topic) {
+          var c2 = $("callout-" + grp.dataset.topic); if (c2) c2.style.display = "none";
+        }
+      });
+    });
+  });
+
+  // ---- live dosage calculator ----
   function refreshDose() {
-    var mode = $("dose_mode").value;
-    $("conc-inputs").style.display = mode === "concentration" ? "" : "none";
-    $("label-inputs").style.display = mode === "label" ? "" : "none";
-    if (!mode) { $("dose-out").textContent = "—"; return; }
-    fetch("/api/dose", { method: "POST", headers: apiHeaders(),
-                         body: JSON.stringify(doseBody()) })
+    var g = parseFloat($("grams_per_day").value);
+    var p = parseFloat($("percent_thc").value);
+    if (isNaN(g) || isNaN(p)) { $("dose-out").textContent = "0"; return; }
+    fetch("/api/dose", { method: "POST", headers: headers(),
+      body: JSON.stringify({ dose_mode: "concentration", grams_per_day: g, percent_thc: p }) })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        $("dose-out").textContent =
-          d && d.thc_mg_per_day != null ? d.thc_mg_per_day.toFixed(1) : "—";
+        $("dose-out").textContent = d && d.thc_mg_per_day != null
+          ? (Number.isInteger(d.thc_mg_per_day) ? d.thc_mg_per_day : d.thc_mg_per_day.toFixed(1))
+          : "—";
       })
       .catch(function () { $("dose-out").textContent = "—"; });
   }
-  ["dose_mode", "grams_per_day", "percent_thc", "mg_per_unit", "units_per_day"]
-    .forEach(function (id) { $(id).addEventListener("input", refreshDose); });
+  $("grams_per_day").addEventListener("input", refreshDose);
+  $("percent_thc").addEventListener("input", refreshDose);
 
-  // contraindication callouts
-  document.querySelectorAll("[data-topic]").forEach(function (box) {
-    box.addEventListener("change", function () {
-      $("callout-" + box.dataset.topic).style.display =
-        box.checked ? "block" : "none";
-    });
-  });
-
-  // adverse events rows
-  $("ae-add").addEventListener("click", function () {
-    var row = document.createElement("div");
-    row.className = "row ae-row";
-    row.innerHTML = '<div><label>Event date</label><input type="date" class="ae-date"></div>' +
-      '<div><label>Description</label><input type="text" class="ae-desc"></div>';
-    $("ae-rows").appendChild(row);
-  });
-
-  // save
+  // ---- save ----
   $("save").addEventListener("click", function () {
-    var aes = [];
-    document.querySelectorAll(".ae-row").forEach(function (row) {
-      var desc = row.querySelector(".ae-desc").value.trim();
-      if (desc) aes.push({ date: row.querySelector(".ae-date").value || null,
-                           description: desc });
-    });
-    var body = doseBody();
-    body.exposure_status = $("exposure_status").value;
-    body.start_date = $("start_date").value || null;
-    body.quit_date = $("quit_date").value || null;
-    body.method = $("method").value || null;
-    body.product_type = $("product_type").value || null;
+    var body = {
+      exposure_status: $("exposure_status").value,
+      start_date: $("start_date").value || null,
+      quit_date: $("quit_date").value || null,
+      method: $("method").value || null,
+      product_type: $("product_type").value || null,
+      recommending_physician: $("recommending_physician").value || null,
+      condition_treated: $("condition_treated").value || null,
+      comment: $("comment").value || null
+    };
+    var g = parseFloat($("grams_per_day").value), p = parseFloat($("percent_thc").value);
+    if (!isNaN(g) && !isNaN(p)) { body.dose_mode = "concentration"; body.grams_per_day = g; body.percent_thc = p; }
     ["medical_use","duic","mix_alcohol","desire_to_quit","counseling_given",
-     "hyperemesis","reproductive_issue","schizoaffective"].forEach(function (id) {
-      body[id] = $(id).checked;
+     "hyperemesis","reproductive_issue","schizoaffective"].forEach(function (n) {
+      if (n in bools) body[n] = bools[n];
     });
-    body.recommending_physician = $("recommending_physician").value || null;
-    body.condition_treated = $("condition_treated").value || null;
-    body.adverse_events = aes;
-    body.comment = $("comment").value || null;
+    var desc = $("ae_desc").value.trim();
+    if (desc) body.adverse_events = [{ date: $("ae_date").value || null, description: desc }];
 
     var out = $("save-result");
-    fetch("/api/history", { method: "POST", headers: apiHeaders(),
-                            body: JSON.stringify(body) })
+    fetch("/api/history", { method: "POST", headers: headers(), body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (res) {
-        if (res.ok) {
-          out.className = "ok";
-          out.textContent = "Saved. Next review due " + res.d.next_review_due + ".";
-        } else {
-          out.className = "err";
-          out.textContent = (res.d.errors || [res.d.error || "save failed"]).join(" · ");
-        }
+        if (res.ok) { out.className = "ok"; out.textContent = "Saved · next review " + res.d.next_review_due; }
+        else { out.className = "err"; out.textContent = (res.d.errors || [res.d.error || "save failed"]).join(" · "); }
       })
       .catch(function () { out.className = "err"; out.textContent = "Network error."; });
   });

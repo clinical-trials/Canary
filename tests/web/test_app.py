@@ -122,7 +122,8 @@ def test_full_flow_form_renders_with_context(client):
     assert "Sandbox Patient" in page
     assert "Chronic pain" in page
     assert "No dose data recorded yet" in page
-    assert "100 mg THC/day" in page  # provider help note
+    assert "Cannabis Use" in page   # SmartForm legend (matches Figure A)
+    assert "mg per day" in page     # the big dosage readout label
 
 
 def test_dose_api(client):
