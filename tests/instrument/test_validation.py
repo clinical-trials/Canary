@@ -76,6 +76,89 @@ def test_multiple_products_serialized_as_repeating_groups():
     assert total["answer"][0]["valueDecimal"] == 260.0  # 100 + 160
 
 
+def test_per_product_route_gives_additive_effective_total():
+    from cannabis_canary.dosage import ROUTE_BIOAVAILABILITY
+
+    h = parse_history(
+        {
+            "exposure_status": "current-every-day",
+            "products": [
+                {"product_type": "tincture", "method": "sublingual",
+                 "dose_mode": "concentration", "grams_per_day": 1.0, "percent_thc": 10.0},
+                {"product_type": "wax", "method": "smoked",
+                 "dose_mode": "concentration", "grams_per_day": 0.2, "percent_thc": 80.0},
+            ],
+        }
+    )
+    assert h.thc_mg_per_day == 260.0  # consumed: 100 + 160
+    expected_effective = (
+        100.0 * ROUTE_BIOAVAILABILITY["sublingual"]
+        + 160.0 * ROUTE_BIOAVAILABILITY["smoked"]
+    )
+    assert h.effective_mg_per_day == expected_effective
+    assert [p.method for p in h.products] == ["sublingual", "smoked"]
+
+
+def test_topical_route_contributes_zero_effective():
+    h = parse_history(
+        {
+            "exposure_status": "current-some-days",
+            "products": [
+                {"product_type": "cream", "method": "topical",
+                 "dose_mode": "concentration", "grams_per_day": 1.0, "percent_thc": 10.0},
+            ],
+        }
+    )
+    assert h.thc_mg_per_day == 100.0
+    assert h.effective_mg_per_day == 0.0  # topical: no systemic absorption
+
+
+def test_unset_route_leaves_effective_none():
+    h = parse_history(
+        {
+            "exposure_status": "current-some-days",
+            "products": [
+                {"product_type": "oil", "method": "per-rectum",
+                 "dose_mode": "concentration", "grams_per_day": 1.0, "percent_thc": 10.0},
+            ],
+        }
+    )
+    assert h.thc_mg_per_day == 100.0
+    assert h.effective_mg_per_day is None
+
+
+def test_qr_serializes_method_per_product():
+    h = parse_history(
+        {
+            "exposure_status": "current-every-day",
+            "products": [
+                {"product_type": "tincture", "method": "sublingual",
+                 "dose_mode": "concentration", "grams_per_day": 1.0, "percent_thc": 10.0},
+            ],
+        }
+    )
+    qr = to_questionnaire_response(h, authored="2026-07-12T00:00:00Z")
+    group = next(i for i in qr["item"] if i["linkId"] == "products")
+    methods = [x for x in group["item"] if x["linkId"] == "method"]
+    assert methods[0]["answer"][0]["valueCoding"]["code"] == "sublingual"
+    eff = [i for i in qr["item"] if i["linkId"] == "effective_mg_per_day"]
+    assert eff[0]["answer"][0]["valueDecimal"] == h.effective_mg_per_day
+
+
+def test_bad_route_in_list_reports_indexed_error():
+    with pytest.raises(InstrumentValidationError) as exc:
+        parse_history(
+            {
+                "exposure_status": "current-every-day",
+                "products": [
+                    {"product_type": "tincture", "method": "injection",
+                     "dose_mode": "concentration", "grams_per_day": 1.0, "percent_thc": 10.0},
+                ],
+            }
+        )
+    assert any("products[0].method" in e for e in exc.value.errors)
+
+
 def test_bad_product_in_list_reports_indexed_error():
     with pytest.raises(InstrumentValidationError) as exc:
         parse_history(

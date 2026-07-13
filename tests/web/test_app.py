@@ -122,8 +122,10 @@ def test_full_flow_form_renders_with_context(client):
     assert "Sandbox Patient" in page
     assert "Chronic pain" in page
     assert "No dose data recorded yet" in page
-    assert "Cannabis Use" in page   # SmartForm legend (matches Figure A)
-    assert "mg per day" in page     # the big dosage readout label
+    assert "Cannabis Use" in page      # SmartForm legend (matches Figure A)
+    assert "mg/day consumed" in page   # consumed dosage readout
+    assert ">Route<" in page           # per-product route (method) column
+    assert "effective" in page         # estimated effective (bioavailability) dose
 
 
 def test_dose_api(client):
@@ -132,7 +134,10 @@ def test_dose_api(client):
         json={"dose_mode": "concentration", "grams_per_day": 1.0,
               "percent_thc": 10.0},
     )
-    assert resp.json() == {"thc_mg_per_day": 100.0}
+    body = resp.json()
+    assert body["thc_mg_per_day"] == 100.0
+    assert body["effective_mg_per_day"] is None  # no route -> not estimated
+    assert body["effective_partial"] is True
 
     resp = client.post(
         "/api/dose", headers=API_HEADERS,
@@ -150,7 +155,25 @@ def test_dose_api_sums_multiple_products(client):
             {"dose_mode": "label", "mg_per_unit": 10.0, "units_per_day": 2.0},
         ]},
     )
-    assert resp.json() == {"thc_mg_per_day": 120.0}
+    assert resp.json()["thc_mg_per_day"] == 120.0
+
+
+def test_dose_api_applies_route_bioavailability(client):
+    from cannabis_canary.dosage import ROUTE_BIOAVAILABILITY
+
+    resp = client.post(
+        "/api/dose", headers=API_HEADERS,
+        json={"products": [
+            {"dose_mode": "concentration", "grams_per_day": 1.0, "percent_thc": 10.0,
+             "method": "smoked"},
+            {"dose_mode": "concentration", "grams_per_day": 0.2, "percent_thc": 80.0,
+             "method": "smoked"},
+        ]},
+    )
+    body = resp.json()
+    assert body["thc_mg_per_day"] == 260.0  # consumed
+    assert body["effective_mg_per_day"] == 260.0 * ROUTE_BIOAVAILABILITY["smoked"]
+    assert body["effective_partial"] is False
 
 
 def test_dose_api_skips_incomplete_rows(client):
@@ -161,7 +184,7 @@ def test_dose_api_skips_incomplete_rows(client):
             {"dose_mode": "", "grams_per_day": None},  # incomplete -> skipped
         ]},
     )
-    assert resp.json() == {"thc_mg_per_day": 200.0}
+    assert resp.json()["thc_mg_per_day"] == 200.0
 
 
 def test_dose_api_requires_custom_header(client):

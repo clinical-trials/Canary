@@ -1,4 +1,10 @@
 """Cannabis Canary© dosage calculator — pure mg/day math (no PHI)."""
+from cannabis_canary.dosage.bioavailability import (
+    ROUTE_BIOAVAILABILITY,
+    ROUTE_GUIDANCE,
+    bioavailability_factor,
+    effective_mg_per_day,
+)
 from cannabis_canary.dosage.calculator import (
     InvalidDoseInput,
     compute_dose,
@@ -23,4 +29,8 @@ __all__ = [
     "Cannabinoid",
     "DoseInput",
     "DoseResult",
+    "ROUTE_BIOAVAILABILITY",
+    "ROUTE_GUIDANCE",
+    "bioavailability_factor",
+    "effective_mg_per_day",
 ]

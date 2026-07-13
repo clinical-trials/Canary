@@ -28,8 +28,10 @@ from cannabis_canary.dosage import (
     Cannabinoid,
     DoseInput,
     InvalidDoseInput,
-    total_mg_per_day,
+    compute_dose,
+    effective_mg_per_day,
 )
+from cannabis_canary.dosage import ROUTE_GUIDANCE
 from cannabis_canary.instrument import (
     EXPOSURE_STATUSES,
     METHODS,
@@ -230,6 +232,7 @@ def create_app(settings: Settings, http_client: httpx.Client | None = None) -> F
                 "exposure_statuses": EXPOSURE_STATUSES,
                 "methods": METHODS,
                 "product_types": PRODUCT_TYPES,
+                "route_guidance": ROUTE_GUIDANCE,
                 "contraindications": CONTRAINDICATION_TOPICS,
                 "trend_svg": trend_svg(points),
                 "review": review,
@@ -244,13 +247,17 @@ def create_app(settings: Settings, http_client: httpx.Client | None = None) -> F
         require_api_header(request)
         body = await request.json()
         raw = body.get("products") if isinstance(body.get("products"), list) else [body]
-        inputs = []
+        default_method = body.get("method")
+        consumed_total = 0.0
+        effective_total = 0.0
+        any_effective = False
+        effective_partial = False
         try:
             for product in raw:
                 mode_str = product.get("dose_mode")
                 if not mode_str:
                     continue  # incomplete product row — contributes nothing yet
-                inputs.append(
+                consumed = compute_dose(
                     DoseInput(
                         cannabinoid=Cannabinoid.THC,
                         mode=CalcMode(mode_str),
@@ -259,11 +266,22 @@ def create_app(settings: Settings, http_client: httpx.Client | None = None) -> F
                         mg_per_unit=product.get("mg_per_unit"),
                         units_per_day=product.get("units_per_day"),
                     )
-                )
-            total = total_mg_per_day(inputs)
+                ).mg_per_day
+                consumed_total += consumed
+                route = product.get("method") or default_method
+                effective = effective_mg_per_day(consumed, route)
+                if effective is None:
+                    effective_partial = True
+                else:
+                    any_effective = True
+                    effective_total += effective
         except (InvalidDoseInput, ValueError) as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
-        return {"thc_mg_per_day": total}
+        return {
+            "thc_mg_per_day": consumed_total,  # consumed (method-independent)
+            "effective_mg_per_day": effective_total if any_effective else None,
+            "effective_partial": effective_partial,
+        }
 
     @app.post("/api/history")
     async def api_save_history(request: Request):

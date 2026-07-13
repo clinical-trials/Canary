@@ -19,7 +19,7 @@
 
   fieldset.canna { border: 1px solid var(--edge-dk); border-radius: 3px;
     background: linear-gradient(#f7f8f9, #eceef1); padding: 10px 14px 12px;
-    max-width: 900px; position: relative; }
+    max-width: 940px; position: relative; }
   legend { font-weight: bold; padding: 0 6px; color: #2b3644; }
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 40px; }
@@ -34,11 +34,11 @@
   .lookup .glass { position: absolute; right: 4px; top: 3px; color: var(--muted);
     font-size: 11px; pointer-events: none; }
 
-  /* multi-product dosage block */
+  /* multi-product / multi-route dosage block */
   .doserow { display: flex; gap: 12px; align-items: flex-start; }
   .products-block { flex: 1; }
   .products-head, .prow { display: grid;
-    grid-template-columns: 132px 64px 58px 20px; gap: 4px; align-items: center; }
+    grid-template-columns: 108px 96px 54px 46px 18px; gap: 4px; align-items: center; }
   .products-head { color: var(--muted); font-size: 11px; margin-bottom: 2px; }
   .prow { margin-bottom: 3px; }
   .prow select, .prow input { font: inherit; padding: 2px 3px; border: 1px solid var(--edge);
@@ -48,12 +48,13 @@
   #add-type { font: inherit; margin-top: 3px; padding: 2px 8px; cursor: pointer;
     border: 1px solid var(--edge-dk); background: linear-gradient(#fdfdfe,#e7eaee);
     border-radius: 3px; }
-  .dose { text-align: right; min-width: 96px; }
+  .dose { text-align: right; min-width: 108px; }
   .dose-num { font-size: 30px; font-weight: bold; font-variant-numeric: tabular-nums;
     line-height: 1; color: var(--ink); display: block; }
   .dose-unit { font-size: 11px; color: var(--ink); }
+  .dose-eff { font-size: 12px; color: #5a4a12; margin-top: 4px; }
+  .dose-eff b { font-variant-numeric: tabular-nums; }
 
-  /* Yes / No paired buttons */
   .yn { display: inline-flex; gap: 6px; }
   .yn button { font: inherit; padding: 1px 12px 2px; border: 1px solid var(--edge-dk);
     background: linear-gradient(#fdfdfe, #e7eaee); border-radius: 3px; cursor: pointer;
@@ -77,12 +78,17 @@
   #save-result { font-size: 12px; }
   .ok { color: var(--ok); } .err { color: var(--err); font-weight: bold; }
 
-  .cds { max-width: 900px; margin: 10px 0 0; }
+  .guidance { max-width: 940px; margin: 8px 0 0; font-size: 11px; color: var(--muted);
+    background: #f4f6f8; border: 1px solid var(--line, #d7dce2); border-radius: 4px;
+    padding: 6px 10px; }
+  .guidance summary { cursor: pointer; color: var(--ink); font-weight: bold; }
+  .guidance ul { margin: 4px 0 0; padding-left: 18px; }
+  .cds { max-width: 940px; margin: 10px 0 0; }
   .callout { display: none; border-left: 4px solid var(--warn-edge);
     background: var(--warn-bg); padding: 8px 12px; margin: 6px 0; font-size: 12px; }
   .callout strong { display: block; margin-bottom: 2px; }
   .callout a { color: #8a6d00; }
-  .trend { max-width: 900px; margin-top: 14px; }
+  .trend { max-width: 940px; margin-top: 14px; }
   .trend h2 { font-size: 13px; margin: 0 0 4px; }
   svg { max-width: 100%; height: auto; }
 </style>
@@ -122,42 +128,31 @@
         <label for="quit_date">Quit date:</label>
         <input class="fld" type="date" id="quit_date">
       </div>
-    </div>
-    <!-- RIGHT: multi-product dosage calculator -->
-    <div>
-      <div class="doserow">
-        <div class="products-block">
-          <div class="products-head"><span>Types (add multiple)</span><span>Grams/day</span><span>%THC</span><span></span></div>
-          <div id="products"></div>
-          <button type="button" id="add-type">+ Add type</button>
-        </div>
-        <div class="dose">
-          <span class="dose-num" id="dose-out">0</span>
-          <span class="dose-unit">mg per day<br>(total)</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid" style="margin-top:6px">
-    <!-- LEFT -->
-    <div>
-      <div class="row">
-        <label for="method">Method of ingestion:</label>
-        <span class="lookup">
-          <select class="fld" id="method">
-            <option value="">—</option>
-            {% for m in methods %}<option value="{{ m }}">{{ m.replace("-", " ") }}</option>{% endfor %}
-          </select><span class="glass">&#128269;</span>
-        </span>
-      </div>
       <div class="row">
         <label for="ae_date">Adverse events:</label>
         <span><input class="fld" type="date" id="ae_date">
           <input class="txt" style="width:150px" type="text" id="ae_desc" placeholder="description"></span>
       </div>
     </div>
-    <!-- RIGHT -->
+    <!-- RIGHT: multi-product / multi-route dosage calculator -->
+    <div>
+      <div class="doserow">
+        <div class="products-block">
+          <div class="products-head"><span>Type</span><span>Route</span><span>Grams/day</span><span>%THC</span><span></span></div>
+          <div id="products"></div>
+          <button type="button" id="add-type">+ Add type / route</button>
+        </div>
+        <div class="dose">
+          <span class="dose-num" id="dose-out">0</span>
+          <span class="dose-unit">mg/day consumed</span>
+          <div class="dose-eff">&asymp; <b id="dose-eff">&mdash;</b> mg/day effective*</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:6px">
+    <div></div>
     <div>
       <div class="row">
         <label>Medical use:</label>
@@ -219,6 +214,20 @@
 </fieldset>
 </form>
 
+<details class="guidance" open>
+  <summary>Dosing &amp; route guidance — *estimated effective dose is not a measured value</summary>
+  <p><b>Consumed mg/day</b> is the THC in the products entered (grams/day &times; %THC).
+  <b>Estimated effective mg/day</b> applies a per-route bioavailability factor to
+  approximate systemically absorbed THC. These factors are rough, highly variable
+  estimates <b>pending clinical validation</b> — source: The Permanente Journal,
+  <a href="https://doi.org/10.7812/TPP/19.200" target="_blank" rel="noopener noreferrer">TPP/19.200</a>.
+  A "+" on the effective total means one or more routes had no agreed factor and
+  were left out.</p>
+  <ul>
+    {% for route, text in route_guidance.items() %}<li><b>{{ route.replace("-", " ") }}:</b> {{ text }}</li>{% endfor %}
+  </ul>
+</details>
+
 <div class="cds">
   {% for key, c in contraindications.items() %}
   <div class="callout" id="callout-{{ key }}">
@@ -241,6 +250,10 @@
       <option value="">— type —</option>
       {% for p in product_types %}<option value="{{ p }}">{{ p.replace("-", " ") }}</option>{% endfor %}
     </select>
+    <select class="pmethod">
+      <option value="">— route —</option>
+      {% for m in methods %}<option value="{{ m }}">{{ m.replace("-", " ") }}</option>{% endfor %}
+    </select>
     <input class="pgrams" type="number" step="0.1" min="0" placeholder="g">
     <input class="ppct" type="number" step="0.1" min="0" max="100" placeholder="%">
     <button type="button" class="prm" title="Remove">&times;</button>
@@ -253,11 +266,9 @@
   var bools = {};
   function headers() { return { "Content-Type": "application/json", "X-Canary-Request": "1" }; }
 
-  // ---- product rows (multiple types, additive) ----
   var tpl = $("prow-tpl");
   function addRow() {
-    var node = tpl.content.cloneNode(true);
-    $("products").appendChild(node);
+    $("products").appendChild(tpl.content.cloneNode(true));
     var row = $("products").lastElementChild;
     row.querySelectorAll("select,input").forEach(function (el) {
       el.addEventListener("input", refreshDose);
@@ -274,10 +285,12 @@
     var rows = [];
     document.querySelectorAll("#products .prow").forEach(function (row) {
       var type = row.querySelector(".ptype").value || null;
+      var method = row.querySelector(".pmethod").value || null;
       var g = parseFloat(row.querySelector(".pgrams").value);
       var p = parseFloat(row.querySelector(".ppct").value);
       var entry = {};
       if (type) entry.product_type = type;
+      if (method) entry.method = method;
       if (!isNaN(g)) entry.grams_per_day = g;
       if (!isNaN(p)) entry.percent_thc = p;
       if (!isNaN(g) && !isNaN(p)) entry.dose_mode = "concentration";
@@ -292,13 +305,20 @@
     fetch("/api/dose", { method: "POST", headers: headers(),
       body: JSON.stringify({ products: collectProducts() }) })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) { $("dose-out").textContent = d && d.thc_mg_per_day != null ? fmt(d.thc_mg_per_day) : "—"; })
-      .catch(function () { $("dose-out").textContent = "—"; });
+      .then(function (d) {
+        if (!d) { $("dose-out").textContent = "—"; $("dose-eff").textContent = "—"; return; }
+        $("dose-out").textContent = d.thc_mg_per_day != null ? fmt(d.thc_mg_per_day) : "—";
+        if (d.effective_mg_per_day == null) {
+          $("dose-eff").textContent = d.effective_partial ? "n/a" : "—";
+        } else {
+          $("dose-eff").textContent = fmt(d.effective_mg_per_day) + (d.effective_partial ? "+" : "");
+        }
+      })
+      .catch(function () { $("dose-out").textContent = "—"; $("dose-eff").textContent = "—"; });
   }
 
-  addRow();  // start with one product row
+  addRow();
 
-  // ---- Yes/No buttons ----
   document.querySelectorAll(".yn[data-bool]").forEach(function (grp) {
     var name = grp.dataset.bool;
     grp.querySelectorAll("button").forEach(function (btn) {
@@ -316,13 +336,11 @@
     });
   });
 
-  // ---- save ----
   $("save").addEventListener("click", function () {
     var body = {
       exposure_status: $("exposure_status").value,
       start_date: $("start_date").value || null,
       quit_date: $("quit_date").value || null,
-      method: $("method").value || null,
       products: collectProducts(),
       recommending_physician: $("recommending_physician").value || null,
       condition_treated: $("condition_treated").value || null,
@@ -339,7 +357,7 @@
     fetch("/api/history", { method: "POST", headers: headers(), body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (res) {
-        if (res.ok) { out.className = "ok"; out.textContent = "Saved · " + (res.d.thc_mg_per_day ?? 0) + " mg/day · next review " + res.d.next_review_due; }
+        if (res.ok) { out.className = "ok"; out.textContent = "Saved · " + (res.d.thc_mg_per_day ?? 0) + " mg/day consumed · next review " + res.d.next_review_due; }
         else { out.className = "err"; out.textContent = (res.d.errors || [res.d.error || "save failed"]).join(" · "); }
       })
       .catch(function () { out.className = "err"; out.textContent = "Network error."; });

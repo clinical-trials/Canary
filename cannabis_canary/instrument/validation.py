@@ -1,15 +1,21 @@
 """Validation + typed model for captured cannabis social histories.
 
 Accepts the JSON payload the form posts, validates against the spec's value
-sets, computes an ADDITIVE THC mg/day total across one or more products via the
-dosage module, and converts to a FHIR R4 QuestionnaireResponse for registry
-storage. Collects ALL errors before raising so the provider can fix everything
-in one pass.
+sets, and computes two additive daily totals via the dosage module:
+  - thc_mg_per_day        : mg THC *consumed* (method-independent)
+  - effective_mg_per_day  : estimated mg THC *systemically absorbed*, applying a
+                            per-route bioavailability factor (may be None if no
+                            product has an agreed route factor).
 
-Payload shape for products (both accepted):
-  - New/multi:  {"products": [{"product_type","dose_mode","grams_per_day",
-                 "percent_thc","mg_per_unit","units_per_day"}, ...]}
-  - Legacy/single: the same keys at the top level (wrapped into one product).
+Each product carries its own type AND route (method of ingestion), so a history
+may mix multiple product types and multiple routes. Collects ALL errors before
+raising so the provider can fix everything in one pass.
+
+Products payload (both accepted):
+  - New/multi:  {"products": [{"product_type","method","dose_mode",
+                 "grams_per_day","percent_thc","mg_per_unit","units_per_day"}, ...]}
+  - Legacy/single: the same keys at the top level (wrapped into one product;
+    a top-level "method" applies as the default route).
 """
 from __future__ import annotations
 
@@ -22,6 +28,7 @@ from cannabis_canary.dosage import (
     DoseInput,
     InvalidDoseInput,
     compute_dose,
+    effective_mg_per_day,
 )
 from cannabis_canary.instrument.definition import (
     EXPOSURE_STATUSES,
@@ -31,7 +38,7 @@ from cannabis_canary.instrument.definition import (
 )
 
 _LEGACY_PRODUCT_KEYS = (
-    "product_type", "dose_mode", "grams_per_day", "percent_thc",
+    "product_type", "method", "dose_mode", "grams_per_day", "percent_thc",
     "mg_per_unit", "units_per_day",
 )
 
@@ -52,12 +59,14 @@ class AdverseEvent:
 @dataclass(frozen=True)
 class ProductEntry:
     product_type: str | None = None
+    method: str | None = None
     dose_mode: str | None = None
     grams_per_day: float | None = None
     percent_thc: float | None = None
     mg_per_unit: float | None = None
     units_per_day: float | None = None
-    thc_mg_per_day: float | None = None  # this product's contribution
+    thc_mg_per_day: float | None = None            # consumed contribution
+    effective_mg_per_day: float | None = None      # route-adjusted contribution
 
 
 @dataclass(frozen=True)
@@ -65,9 +74,9 @@ class CannabisHistory:
     exposure_status: str
     start_date: date | None = None
     quit_date: date | None = None
-    method: str | None = None
     products: tuple[ProductEntry, ...] = field(default_factory=tuple)
-    thc_mg_per_day: float | None = None  # additive total across products
+    thc_mg_per_day: float | None = None            # additive consumed total
+    effective_mg_per_day: float | None = None      # additive estimated-effective total
     medical_use: bool | None = None
     recommending_physician: str | None = None
     condition_treated: str | None = None
@@ -115,19 +124,24 @@ def _parse_bool(value, field_name: str, errors: list[str]) -> bool | None:
     return None
 
 
-def _parse_product(p: dict, i: int, errors: list[str]) -> ProductEntry:
+def _parse_product(p: dict, i: int, default_method, errors: list[str]) -> ProductEntry:
     ptype = p.get("product_type") or None
     if ptype is not None and ptype not in PRODUCT_TYPES:
         errors.append(
             f"products[{i}].product_type: must be one of {PRODUCT_TYPES}, got {ptype!r}"
         )
+
+    method = (p.get("method") or default_method) or None
+    if method is not None and method not in METHODS:
+        errors.append(f"products[{i}].method: must be one of {METHODS}, got {method!r}")
+
     grams = _parse_float(p.get("grams_per_day"), f"products[{i}].grams_per_day", errors)
     pct = _parse_float(p.get("percent_thc"), f"products[{i}].percent_thc", errors)
     mgu = _parse_float(p.get("mg_per_unit"), f"products[{i}].mg_per_unit", errors)
     units = _parse_float(p.get("units_per_day"), f"products[{i}].units_per_day", errors)
 
     dose_mode = p.get("dose_mode") or None
-    dose: float | None = None
+    consumed: float | None = None
     if dose_mode is not None:
         try:
             mode = CalcMode(dose_mode)
@@ -139,7 +153,7 @@ def _parse_product(p: dict, i: int, errors: list[str]) -> ProductEntry:
             mode = None
         if mode is not None:
             try:
-                dose = compute_dose(
+                consumed = compute_dose(
                     DoseInput(
                         cannabinoid=Cannabinoid.THC, mode=mode,
                         grams_per_day=grams, percent=pct,
@@ -149,9 +163,14 @@ def _parse_product(p: dict, i: int, errors: list[str]) -> ProductEntry:
             except InvalidDoseInput as exc:
                 errors.append(f"products[{i}].dose: {exc}")
 
+    effective = (
+        effective_mg_per_day(consumed, method) if consumed is not None else None
+    )
+
     return ProductEntry(
-        product_type=ptype, dose_mode=dose_mode, grams_per_day=grams,
-        percent_thc=pct, mg_per_unit=mgu, units_per_day=units, thc_mg_per_day=dose,
+        product_type=ptype, method=method, dose_mode=dose_mode, grams_per_day=grams,
+        percent_thc=pct, mg_per_unit=mgu, units_per_day=units,
+        thc_mg_per_day=consumed, effective_mg_per_day=effective,
     )
 
 
@@ -176,18 +195,19 @@ def parse_history(payload: dict) -> CannabisHistory:
             f"exposure_status: must be one of {EXPOSURE_STATUSES}, got {exposure!r}"
         )
 
-    method = payload.get("method") or None
-    if method is not None and method not in METHODS:
-        errors.append(f"method: must be one of {METHODS}, got {method!r}")
+    default_method = payload.get("method") or None  # optional per-history default route
 
     start = _parse_date(payload.get("start_date"), "start_date", errors)
     quit_ = _parse_date(payload.get("quit_date"), "quit_date", errors)
 
     products = tuple(
-        _parse_product(p, i, errors) for i, p in enumerate(_raw_products(payload))
+        _parse_product(p, i, default_method, errors)
+        for i, p in enumerate(_raw_products(payload))
     )
-    contributions = [p.thc_mg_per_day for p in products if p.thc_mg_per_day is not None]
-    total = sum(contributions) if contributions else None
+    consumed = [p.thc_mg_per_day for p in products if p.thc_mg_per_day is not None]
+    effective = [p.effective_mg_per_day for p in products if p.effective_mg_per_day is not None]
+    total_consumed = sum(consumed) if consumed else None
+    total_effective = sum(effective) if effective else None
 
     bools = {
         name: _parse_bool(payload.get(name), name, errors)
@@ -219,9 +239,9 @@ def parse_history(payload: dict) -> CannabisHistory:
         exposure_status=exposure,
         start_date=start,
         quit_date=quit_,
-        method=method,
         products=products,
-        thc_mg_per_day=total,
+        thc_mg_per_day=total_consumed,
+        effective_mg_per_day=total_effective,
         adverse_events=tuple(adverse_events),
         comment=(payload.get("comment") or None),
         recommending_physician=(payload.get("recommending_physician") or None),
@@ -240,6 +260,10 @@ def _answer(value) -> dict:
     return {"valueString": str(value)}
 
 
+def _coding(code: str) -> dict:
+    return {"valueCoding": {"code": code, "display": code.replace("-", " ")}}
+
+
 def to_questionnaire_response(
     history: CannabisHistory,
     authored: str,
@@ -251,28 +275,18 @@ def to_questionnaire_response(
     def add(link_id: str, value, coded: bool = False):
         if value is None:
             return
-        answer = (
-            {"valueCoding": {"code": value, "display": value.replace("-", " ")}}
-            if coded
-            else _answer(value)
-        )
-        items.append({"linkId": link_id, "answer": [answer]})
+        items.append({"linkId": link_id, "answer": [_coding(value) if coded else _answer(value)]})
 
     add("exposure_status", history.exposure_status, coded=True)
     add("start_date", history.start_date)
     add("quit_date", history.quit_date)
-    add("method", history.method, coded=True)
 
     for product in history.products:
         p_items: list[dict] = []
         if product.product_type is not None:
-            p_items.append({
-                "linkId": "product_type",
-                "answer": [{"valueCoding": {
-                    "code": product.product_type,
-                    "display": product.product_type.replace("-", " "),
-                }}],
-            })
+            p_items.append({"linkId": "product_type", "answer": [_coding(product.product_type)]})
+        if product.method is not None:
+            p_items.append({"linkId": "method", "answer": [_coding(product.method)]})
         for lid, val in (
             ("grams_per_day", product.grams_per_day),
             ("percent_thc", product.percent_thc),
@@ -284,7 +298,8 @@ def to_questionnaire_response(
         if p_items:
             items.append({"linkId": "products", "item": p_items})
 
-    add("thc_mg_per_day", history.thc_mg_per_day)  # additive total
+    add("thc_mg_per_day", history.thc_mg_per_day)            # consumed total
+    add("effective_mg_per_day", history.effective_mg_per_day)  # estimated-effective total
     add("medical_use", history.medical_use)
     add("recommending_physician", history.recommending_physician)
     add("condition_treated", history.condition_treated)
